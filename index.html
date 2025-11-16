@@ -17,10 +17,12 @@
 
         const App = {
             setup() {
-                // API Configuration
-                const appId = 'AKfycbxb6xxhIpe4lla24e7AZuAvfpeDMqtF_1XZBQ2bMLqDdgBIaQcEl_U4NCgHYB9JQY6hFQ';
-                const userId = '3938186466310945';
-                const username = "Lê Hậu";
+                // API Configuration - Get from URL query parameters
+                // Example URL: ?appId=YOUR_APP_ID&userId=YOUR_USER_ID&username=YOUR_USERNAME
+                const urlParams = new URLSearchParams(window.location.search);
+                const appId = urlParams.get('appId') || localStorage.getItem('appId');
+                const userId = urlParams.get('userId') || localStorage.getItem('userId');
+                const username = urlParams.get('username') || 'Bạn. Bạn không thể dùng được chức năng nhắc nhở nếu không cung cấp đúng userId và appId';
                 
                 // State
                 const currentPage = ref('menu'); // menu, createReminder, about
