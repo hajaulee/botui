@@ -23,9 +23,9 @@
                 const apiId = urlParams.get('apiId') || localStorage.getItem('apiId');
                 const userId = urlParams.get('userId') || localStorage.getItem('userId');
                 const username = urlParams.get('username') || 'Bạn. Bạn không thể dùng được chức năng nhắc nhở nếu không cung cấp đúng userId và apiId';
-                
+                const initialPage = urlParams.get('page') || 'menu';
                 // State
-                const currentPage = ref('menu'); // menu, createReminder, about
+                const currentPage = ref(initialPage); // menu, createReminder, about
                 const reminders = ref([]);
                 const isLoading = ref(false);
                 const isDeleting = ref(false);
@@ -92,43 +92,48 @@
                         
                         // Parse messages from API response
                         if (data.messages && Array.isArray(data.messages)) {
-                            reminders.value = data.messages.map((message, index) => {
-                                const text = message.text || '';
-                                // Parse the text to extract information
-                                const lines = text.split('\n').filter(line => line.trim());
-                                
-                                let person = '';
-                                let content = '';
-                                let time = '';
-                                let repeatType = 'none';
-                                
-                                // Parse each line
-                                lines.forEach(line => {
-                                    if (line.includes('Người nhận:')) {
-                                        person = line.replace('Người nhận:', '').trim();
-                                    } else if (line.includes('Nội dung:')) {
-                                        content = line.replace('Nội dung:', '').trim();
-                                    } else if (line.includes('Vào lúc:')) {
-                                        time = line.replace('Vào lúc:', '').trim();
-                                    } else if (line.includes('Lặp lại:')) {
-                                        const repeatText = line.replace('Lặp lại:', '').trim();
-                                        if (repeatText.includes('hàng ngày')) repeatType = 'day';
-                                        else if (repeatText.includes('hàng tuần')) repeatType = 'week';
-                                        else if (repeatText.includes('hàng tháng')) repeatType = 'month';
-                                        else repeatType = 'no';
-                                    }
+                            // Check if the only message is the "no reminders" message
+                            if (data.messages.length === 1 && data.messages[0].text.includes('Bạn chưa có nhắc nhở nào')) {
+                                reminders.value = [];
+                            } else {
+                                reminders.value = data.messages.map((message, index) => {
+                                    const text = message.text || '';
+                                    // Parse the text to extract information
+                                    const lines = text.split('\n').filter(line => line.trim());
+                                    
+                                    let person = '';
+                                    let content = '';
+                                    let time = '';
+                                    let repeatType = 'no';
+                                    
+                                    // Parse each line
+                                    lines.forEach(line => {
+                                        if (line.includes('Người nhận:')) {
+                                            person = line.replace('Người nhận:', '').trim();
+                                        } else if (line.includes('Nội dung:')) {
+                                            content = line.replace('Nội dung:', '').trim();
+                                        } else if (line.includes('Vào lúc:')) {
+                                            time = line.replace('Vào lúc:', '').trim();
+                                        } else if (line.includes('Lặp lại:')) {
+                                            const repeatText = line.replace('Lặp lại:', '').trim();
+                                            if (repeatText.includes('hàng ngày')) repeatType = 'day';
+                                            else if (repeatText.includes('hàng tuần')) repeatType = 'week';
+                                            else if (repeatText.includes('hàng tháng')) repeatType = 'month';
+                                            else repeatType = 'no';
+                                        }
+                                    });
+                                    
+                                    return {
+                                        id: index,
+                                        person: person || '',
+                                        content: content || '',
+                                        time: time || '',
+                                        repeatType: repeatType,
+                                        rawText: text,
+                                        createdAt: new Date().toLocaleString('vi-VN')
+                                    };
                                 });
-                                
-                                return {
-                                    id: index,
-                                    person: person || '',
-                                    content: content || '',
-                                    time: time || '',
-                                    repeatType: repeatType,
-                                    rawText: text,
-                                    createdAt: new Date().toLocaleString('vi-VN')
-                                };
-                            });
+                            }
                         } else {
                             reminders.value = [];
                         }
@@ -324,6 +329,16 @@
                             <!-- Error Message -->
                             <div v-if="errorMessage" class="mb-6 p-4 bg-red-100 border border-red-300 rounded-lg text-red-700">
                                 ⚠️ {{ errorMessage }}
+                            </div>
+
+                            <!-- Empty State Message -->
+                            <div v-if="!isLoading && reminders.length === 0" class="mb-8 bg-yellow-50 rounded-lg p-6 border border-yellow-200">
+                                <p class="text-center text-yellow-700 text-lg">
+                                    📭 Bạn chưa có nhắc nhở nào!
+                                </p>
+                                <p class="text-center text-yellow-600 text-sm mt-2">
+                                    Hãy tạo nhắc nhở mới bên dưới
+                                </p>
                             </div>
 
                             <!-- Reminders List (Above Form) -->
