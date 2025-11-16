@@ -13,7 +13,7 @@
     <div id="app" class="min-h-screen"></div>
 
     <script>
-        const { createApp, ref, reactive } = Vue;
+        const { createApp, ref, reactive, onMounted } = Vue;
 
         const App = {
             setup() {
@@ -53,6 +53,21 @@
                     { value: 'weekday', label: 'Ngày trong tuần' },
                     { value: 'weekend', label: 'Cuối tuần' }
                 ];
+
+
+                // Lifecycle Hooks
+                onMounted(() => {
+
+                    // Navigate to initial page based on URL parameter
+                    const gotoFunctions = {
+                        'menu': goToMenu,
+                        'createReminder': goToCreateReminder,
+                        'about': goToAbout
+                    };
+                    if (gotoFunctions[initialPage]) {
+                        gotoFunctions[initialPage]();
+                    }
+                });
 
                 // Methods
                 const goToMenu = () => {
