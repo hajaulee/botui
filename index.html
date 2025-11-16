@@ -18,11 +18,11 @@
         const App = {
             setup() {
                 // API Configuration - Get from URL query parameters
-                // Example URL: ?appId=YOUR_APP_ID&userId=YOUR_USER_ID&username=YOUR_USERNAME
+                // Example URL: ?apiId=YOUR_API_ID&userId=YOUR_USER_ID&username=YOUR_USERNAME
                 const urlParams = new URLSearchParams(window.location.search);
-                const appId = urlParams.get('appId') || localStorage.getItem('appId');
+                const apiId = urlParams.get('apiId') || localStorage.getItem('apiId');
                 const userId = urlParams.get('userId') || localStorage.getItem('userId');
-                const username = urlParams.get('username') || 'Bạn. Bạn không thể dùng được chức năng nhắc nhở nếu không cung cấp đúng userId và appId';
+                const username = urlParams.get('username') || 'Bạn. Bạn không thể dùng được chức năng nhắc nhở nếu không cung cấp đúng userId và apiId';
                 
                 // State
                 const currentPage = ref('menu'); // menu, createReminder, about
@@ -81,7 +81,7 @@
                     isLoading.value = true;
                     errorMessage.value = '';
                     try {
-                        const apiUrl = `https://script.google.com/macros/s/${appId}/exec?msg=list_remind&userId=${userId}`;
+                        const apiUrl = `https://script.google.com/macros/s/${apiId}/exec?msg=list_remind&userId=${userId}`;
                         const response = await fetch(apiUrl);
                         
                         if (!response.ok) {
@@ -161,7 +161,7 @@
                         const personName = people.find(p => p.value === formData.person)?.name || formData.person;
                         
                         // Call API
-                        const apiUrl = `https://script.google.com/macros/s/${appId}/exec?msg=remind%20${encodeURIComponent(formData.person)}%20${encodeURIComponent(datetimeValue)}%20${encodeURIComponent(formData.content)}%20!repeat%20${formData.repeatType}&userId=${userId}&timezone=9&username=${encodeURIComponent(username)}`;
+                        const apiUrl = `https://script.google.com/macros/s/${apiId}/exec?msg=remind%20${encodeURIComponent(formData.person)}%20${encodeURIComponent(datetimeValue)}%20${encodeURIComponent(formData.content)}%20!repeat%20${formData.repeatType}&userId=${userId}&timezone=9&username=${encodeURIComponent(username)}`;
                         
                         const response = await fetch(apiUrl);
                         
@@ -198,7 +198,7 @@
                     try {
                         isDeleting.value = true;
                         // Call API to remove reminder (id is the index)
-                        const apiUrl = `https://script.google.com/macros/s/${appId}/exec?msg=remove_remind%20${remindIndex+1}&userId=${userId}`;
+                        const apiUrl = `https://script.google.com/macros/s/${apiId}/exec?msg=remove_remind%20${remindIndex+1}&userId=${userId}`;
                         const response = await fetch(apiUrl);
                         
                         if (!response.ok) {
@@ -221,7 +221,7 @@
 
                 // Return reactive properties and methods
                 return {
-                    appId,
+                    apiId,
                     userId,
                     username,
                     currentPage,
