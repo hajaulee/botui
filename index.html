@@ -13,19 +13,19 @@
     <div id="app" class="min-h-screen"></div>
 
     <script>
-        const { createApp, ref, reactive, onMounted } = Vue;
+        const { createApp, ref, reactive } = Vue;
 
         const App = {
             setup() {
                 // API Configuration - Get from URL query parameters
-                // Example URL: ?apiId=YOUR_API_ID&userId=YOUR_USER_ID&username=YOUR_USERNAME
+                // Example URL: ?appId=YOUR_APP_ID&userId=YOUR_USER_ID&username=YOUR_USERNAME
                 const urlParams = new URLSearchParams(window.location.search);
-                const apiId = urlParams.get('apiId') || localStorage.getItem('apiId');
-                const userId = urlParams.get('userId') || localStorage.getItem('userId');
-                const username = urlParams.get('username') || 'Bạn. Bạn không thể dùng được chức năng nhắc nhở nếu không cung cấp đúng userId và apiId';
-                const initialPage = urlParams.get('page') || 'menu';
+                const apiId = urlParams.get('appId') || 'AKfycbxb6xxhIpe4lla24e7AZuAvfpeDMqtF_1XZBQ2bMLqDdgBIaQcEl_U4NCgHYB9JQY6hFQ';
+                const userId = urlParams.get('userId') || '3938186466310945';
+                const username = urlParams.get('username') || 'Lê Hậu';
+                
                 // State
-                const currentPage = ref(initialPage); // menu, createReminder, about
+                const currentPage = ref('menu'); // menu, createReminder, about, family
                 const reminders = ref([]);
                 const isLoading = ref(false);
                 const isDeleting = ref(false);
@@ -38,6 +38,11 @@
                     time: '',
                     repeatType: 'no' // no, day, week, month, weekday, weekend
                 });
+                
+                // Family Tree State
+                const familyPerson = ref('me');
+                const familyText = ref('');
+                const familyTree = ref('');
                 
                 // Constants
                 const people = [
@@ -54,21 +59,6 @@
                     { value: 'weekend', label: 'Cuối tuần' }
                 ];
 
-
-                // Lifecycle Hooks
-                onMounted(() => {
-
-                    // Navigate to initial page based on URL parameter
-                    const gotoFunctions = {
-                        'menu': goToMenu,
-                        'createReminder': goToCreateReminder,
-                        'about': goToAbout
-                    };
-                    if (gotoFunctions[initialPage]) {
-                        gotoFunctions[initialPage]();
-                    }
-                });
-
                 // Methods
                 const goToMenu = () => {
                     currentPage.value = 'menu';
@@ -82,6 +72,10 @@
 
                 const goToAbout = () => {
                     currentPage.value = 'about';
+                };
+
+                const goToFamily = () => {
+                    currentPage.value = 'family';
                 };
 
                 const resetForm = () => {
@@ -239,6 +233,73 @@
                     }
                 };
 
+                const parseAndRenderFamilyTree = () => {
+                    if (!familyText.value.trim()) {
+                        familyTree.value = '';
+                        return;
+                    }
+
+                    const lines = familyText.value.split('\n').filter(line => line.trim() !== '');
+                    let result = '';
+                    const isLastChild = []; // Track if each level's current node is the last child
+
+                    // Helper function to get indentation level
+                    const getDepth = (line) => {
+                        const match = line.match(/^( *)/);
+                        return match ? match[1].length : 0;
+                    };
+
+                    // Helper function to check if a node at given index is the last child of its parent
+                    const checkIsLastChild = (index, currentDepth) => {
+                        // Find the next sibling (same depth or less)
+                        for (let i = index + 1; i < lines.length; i++) {
+                            const nextDepth = getDepth(lines[i]);
+                            if (nextDepth < currentDepth) {
+                                // Jumped to a shallower level, so current is last child
+                                return true;
+                            }
+                            if (nextDepth === currentDepth) {
+                                // Found next sibling, so current is not last child
+                                return false;
+                            }
+                            // nextDepth > currentDepth, skip this (it's a child)
+                        }
+                        // No more siblings found, so this is the last child
+                        return true;
+                    };
+
+                    lines.forEach((line, index) => {
+                        const depth = getDepth(line);
+                        const text = line.replaceAll("-", "").trimStart();
+                        
+                        // Build the prefix with tree characters
+                        // Last position - check if this is last sibling
+                        const isLast = checkIsLastChild(index, depth);
+                        // Store whether this node is the last child
+                        isLastChild[depth-1] = isLast;
+                        let prefix = '';
+                        for (let i = 0; i < depth; i++) {
+                            if (i === depth - 1) {
+                                // Last position - check if this is last sibling
+                                prefix += isLast ? '└── ' : '├── ';
+                            } else {
+                                // Not last position - use continuation lines
+                                // Check if ancestors at level i have more siblings                                
+                                const ancestorIsLast = isLastChild[i] != false;
+                                prefix += ancestorIsLast ? '    ' : '│   ';
+                            }
+                        }
+
+                        if (depth === 0) {
+                            prefix = '\n───────────────────────\n';
+                        }
+
+                        result += prefix + text + '\n';
+                    });
+
+                    familyTree.value = result;
+                };
+
                 // Return reactive properties and methods
                 return {
                     apiId,
@@ -257,11 +318,16 @@
                     goToMenu,
                     goToCreateReminder,
                     goToAbout,
+                    goToFamily,
                     resetForm,
                     fetchReminders,
                     createReminder,
                     deleteReminder,
-                    deleteReminderFromAPI
+                    deleteReminderFromAPI,
+                    familyPerson,
+                    familyText,
+                    familyTree,
+                    parseAndRenderFamilyTree
                 };
             },
             template: /* html */`
@@ -308,7 +374,7 @@
                             <div class="bg-white rounded-lg shadow-lg p-8">
                                 <h2 class="text-2xl font-bold text-gray-800 mb-8 text-center">Chọn chức năng</h2>
                                 
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <!-- Create Reminder Button -->
                                     <button 
                                         @click="goToCreateReminder"
@@ -317,6 +383,16 @@
                                         <div class="text-4xl mb-3">📝</div>
                                         <h3 class="text-xl font-bold">Tạo nhắc nhở</h3>
                                         <p class="text-sm text-blue-100 mt-2">Tạo nhắc nhở cho các thành viên</p>
+                                    </button>
+
+                                    <!-- Family Tree Button -->
+                                    <button 
+                                        @click="goToFamily"
+                                        class="p-6 bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg shadow-md transition transform hover:scale-105 active:scale-95"
+                                    >
+                                        <div class="text-4xl mb-3">👨‍👩‍👧‍👦</div>
+                                        <h3 class="text-xl font-bold">Họ hàng</h3>
+                                        <p class="text-sm text-green-100 mt-2">Xem cây gia phả</p>
                                     </button>
 
                                     <!-- About Button -->
@@ -514,6 +590,57 @@
                             <button 
                                 @click="goToMenu"
                                 class="mt-8 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition"
+                            >
+                                ← Quay lại Menu
+                            </button>
+                        </div>
+
+                        <!-- Family Tree Page -->
+                        <div v-if="currentPage === 'family'" class="bg-white rounded-lg shadow-lg p-8">
+                            <h2 class="text-2xl font-bold text-gray-800 mb-6">👨‍👩‍👧‍👦 Cây gia phả</h2>
+                            
+                            <!-- Select Family Person -->
+                            <div class="mb-6">
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Chọn người</label>
+                                <select 
+                                    v-model="familyPerson"
+                                    @change="familyText = ''"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                >
+                                    <option value="me">Bản thân</option>
+                                    <option value="doha">Doha</option>
+                                    <option value="leha">Leha</option>
+                                </select>
+                            </div>
+
+                            <!-- Family Text Input -->
+                            <div class="mb-6">
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Nhập cây gia phả (dùng dấu cách để thụt lề)</label>
+                                <textarea 
+                                    v-model="familyText"
+                                    @input="parseAndRenderFamilyTree"
+                                    placeholder="Ví dụ:&#10;Nội&#10; - cô Xuyền x bác Cõn&#10;  - chị Bộ&#10;   - Hoài&#10;   - Nga&#10;  - chị Bình"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-vertical"
+                                    rows="6"
+                                ></textarea>
+                                <p class="text-xs text-gray-500 mt-2">💡 Dùng dấu cách ở đầu dòng để tạo cấp độ (mỗi dấu cách = 1 cấp)</p>
+                            </div>
+
+                            <!-- Family Tree Display -->
+                            <div v-if="familyTree" class="mb-6 bg-gray-50 rounded-lg p-6 border border-gray-200">
+                                <h3 class="text-lg font-bold text-gray-800 mb-4">🌳 Cây gia phả hiển thị</h3>
+                                <pre class="text-gray-700 text-sm font-mono whitespace-pre">{{ familyTree }}</pre>
+                            </div>
+
+                            <!-- Empty State -->
+                            <div v-if="!familyTree && familyText.trim() === ''" class="mb-6 bg-blue-50 rounded-lg p-6 border border-blue-200">
+                                <p class="text-center text-blue-700">📝 Nhập dữ liệu ở trên để xem cây gia phả</p>
+                            </div>
+
+                            <!-- Back Button -->
+                            <button 
+                                @click="goToMenu"
+                                class="px-6 py-3 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold rounded-lg transition"
                             >
                                 ← Quay lại Menu
                             </button>
