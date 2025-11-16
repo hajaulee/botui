@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Utils - Công cụ hỗ trợ chatbot</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body class="bg-gray-50">
+    <div id="app" class="min-h-screen"></div>
+
+    <script>
+        const { createApp, ref, reactive } = Vue;
+
+        const App = {
+            setup() {
+                // API Configuration
+                const appId = 'AKfycbxb6xxhIpe4lla24e7AZuAvfpeDMqtF_1XZBQ2bMLqDdgBIaQcEl_U4NCgHYB9JQY6hFQ';
+                const userId = '3938186466310945';
+                const username = "Lê Hậu";
+                
+                // State
+                const currentPage = ref('menu'); // menu, createReminder, about
+                const reminders = ref([]);
+                const isLoading = ref(false);
+                const isDeleting = ref(false);
+                const isCreating = ref(false);
+                const errorMessage = ref('');
+                const successMessage = ref('');
+                const formData = reactive({
+                    person: '',
+                    content: '',
+                    time: '',
+                    repeatType: 'no' // no, day, week, month, weekday, weekend
+                });
+                
+                // Constants
+                const people = [
+                    { name: 'Bản thân', value: 'me' },
+                    { name: 'Doha', value: 'đỗthịhải' },
+                    { name: 'Leha', value: 'hajaulee' }
+                ];
+                const repeatTypes = [
+                    { value: 'no', label: 'Không lặp' },
+                    { value: 'day', label: 'Mỗi ngày' },
+                    { value: 'week', label: 'Mỗi tuần' },
+                    { value: 'month', label: 'Mỗi tháng' },
+                    { value: 'weekday', label: 'Ngày trong tuần' },
+                    { value: 'weekend', label: 'Cuối tuần' }
+                ];
+
+                // Methods
+                const goToMenu = () => {
+                    currentPage.value = 'menu';
+                };
+
+                const goToCreateReminder = () => {
+                    currentPage.value = 'createReminder';
+                    resetForm();
+                    fetchReminders();
+                };
+
+                const goToAbout = () => {
+                    currentPage.value = 'about';
+                };
+
+                const resetForm = () => {
+                    formData.person = '';
+                    formData.content = '';
+                    formData.time = '';
+                    formData.repeatType = 'no';
+                    successMessage.value = '';
+                };
+
+                const fetchReminders = async () => {
+                    isLoading.value = true;
+                    errorMessage.value = '';
+                    try {
+                        const apiUrl = `https://script.google.com/macros/s/${appId}/exec?msg=list_remind&userId=${userId}`;
+                        const response = await fetch(apiUrl);
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        
+                        // Parse messages from API response
+                        if (data.messages && Array.isArray(data.messages)) {
+                            reminders.value = data.messages.map((message, index) => {
+                                const text = message.text || '';
+                                // Parse the text to extract information
+                                const lines = text.split('\n').filter(line => line.trim());
+                                
+                                let person = '';
+                                let content = '';
+                                let time = '';
+                                let repeatType = 'none';
+                                
+                                // Parse each line
+                                lines.forEach(line => {
+                                    if (line.includes('Người nhận:')) {
+                                        person = line.replace('Người nhận:', '').trim();
+                                    } else if (line.includes('Nội dung:')) {
+                                        content = line.replace('Nội dung:', '').trim();
+                                    } else if (line.includes('Vào lúc:')) {
+                                        time = line.replace('Vào lúc:', '').trim();
+                                    } else if (line.includes('Lặp lại:')) {
+                                        const repeatText = line.replace('Lặp lại:', '').trim();
+                                        if (repeatText.includes('hàng ngày')) repeatType = 'day';
+                                        else if (repeatText.includes('hàng tuần')) repeatType = 'week';
+                                        else if (repeatText.includes('hàng tháng')) repeatType = 'month';
+                                        else repeatType = 'no';
+                                    }
+                                });
+                                
+                                return {
+                                    id: index,
+                                    person: person || '',
+                                    content: content || '',
+                                    time: time || '',
+                                    repeatType: repeatType,
+                                    rawText: text,
+                                    createdAt: new Date().toLocaleString('vi-VN')
+                                };
+                            });
+                        } else {
+                            reminders.value = [];
+                        }
+                    } catch (error) {
+                        console.error('Lỗi khi lấy danh sách nhắc nhở:', error);
+                        errorMessage.value = 'Không thể tải danh sách nhắc nhở. Vui lòng thử lại.';
+                        reminders.value = [];
+                    } finally {
+                        isLoading.value = false;
+                    }
+                };
+
+                const createReminder = async () => {
+                    if (!formData.person || !formData.content || !formData.time) {
+                        alert('Vui lòng điền đầy đủ thông tin');
+                        return;
+                    }
+                    
+                    try {
+                        isCreating.value = true;
+                        successMessage.value = '';
+                        
+                        // Format datetime: 2025-11-16 17:00
+                        const datetimeValue = formData.time.replace('T', ' ');
+                        
+                        // Get repeat label for display
+                        const repeatLabel = repeatTypes.find(t => t.value === formData.repeatType)?.label || 'Không lặp';
+                        
+                        // Get person name for display
+                        const personName = people.find(p => p.value === formData.person)?.name || formData.person;
+                        
+                        // Call API
+                        const apiUrl = `https://script.google.com/macros/s/${appId}/exec?msg=remind%20${encodeURIComponent(formData.person)}%20${encodeURIComponent(datetimeValue)}%20${encodeURIComponent(formData.content)}%20!repeat%20${formData.repeatType}&userId=${userId}&timezone=9&username=${encodeURIComponent(username)}`;
+                        
+                        const response = await fetch(apiUrl);
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        console.log('Tạo nhắc nhở thành công:', data);
+                        
+                        // Show confirmation alert
+                        alert(`Hihu sẽ nhắc nhở ${personName}: ${formData.content}\nvào lúc: ${datetimeValue}\nlặp lại: ${repeatLabel}`);
+                        
+                        // Fetch updated list
+                        await fetchReminders();
+                        
+                        // Reset form
+                        resetForm();
+                    } catch (error) {
+                        console.error('Lỗi khi tạo nhắc nhở:', error);
+                        alert('Không thể tạo nhắc nhở. Vui lòng thử lại.');
+                    } finally {
+                        isCreating.value = false;
+                    }
+                };
+
+                const deleteReminder = (id) => {
+                    if (confirm('Bạn chắc chắn muốn xóa nhắc nhở này?')) {
+                        deleteReminderFromAPI(id);
+                    }
+                };
+
+                const deleteReminderFromAPI = async (remindIndex) => {
+                    try {
+                        isDeleting.value = true;
+                        // Call API to remove reminder (id is the index)
+                        const apiUrl = `https://script.google.com/macros/s/${appId}/exec?msg=remove_remind%20${remindIndex+1}&userId=${userId}`;
+                        const response = await fetch(apiUrl);
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        console.log('Xóa nhắc nhở thành công:', data);
+                        
+                        // Fetch updated list
+                        await fetchReminders();
+                        alert('Nhắc nhở đã được xóa thành công!');
+                    } catch (error) {
+                        console.error('Lỗi khi xóa nhắc nhở:', error);
+                        alert('Không thể xóa nhắc nhở. Vui lòng thử lại.');
+                    } finally {
+                        isDeleting.value = false;
+                    }
+                };
+
+                // Return reactive properties and methods
+                return {
+                    appId,
+                    userId,
+                    username,
+                    currentPage,
+                    reminders,
+                    isLoading,
+                    isDeleting,
+                    isCreating,
+                    errorMessage,
+                    successMessage,
+                    formData,
+                    people,
+                    repeatTypes,
+                    goToMenu,
+                    goToCreateReminder,
+                    goToAbout,
+                    resetForm,
+                    fetchReminders,
+                    createReminder,
+                    deleteReminder,
+                    deleteReminderFromAPI
+                };
+            },
+            template: /* html */`
+                <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+                    <!-- Loading Overlay (Delete) -->
+                    <div v-if="isDeleting" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div class="bg-white rounded-lg shadow-2xl p-8 text-center">
+                            <div class="flex justify-center mb-4">
+                                <div class="relative w-12 h-12">
+                                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full animate-spin" style="background-image: conic-gradient(from 0deg, #3b82f6 0deg, #3b82f6 90deg, transparent 90deg); animation: spin 1s linear infinite;"></div>
+                                </div>
+                            </div>
+                            <p class="text-lg font-semibold text-gray-800">Đang xóa nhắc nhở...</p>
+                            <p class="text-gray-600 text-sm mt-2">Vui lòng chờ, không thao tác gì khác</p>
+                        </div>
+                    </div>
+
+                    <!-- Loading Overlay (Create) -->
+                    <div v-if="isCreating" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div class="bg-white rounded-lg shadow-2xl p-8 text-center">
+                            <div class="flex justify-center mb-4">
+                                <div class="relative w-12 h-12">
+                                    <div class="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full animate-spin" style="background-image: conic-gradient(from 0deg, #10b981 0deg, #10b981 90deg, transparent 90deg); animation: spin 1s linear infinite;"></div>
+                                </div>
+                            </div>
+                            <p class="text-lg font-semibold text-gray-800">Đang tạo nhắc nhở...</p>
+                            <p class="text-gray-600 text-sm mt-2">Vui lòng chờ, không thao tác gì khác</p>
+                        </div>
+                    </div>
+
+                    <!-- Header -->
+                    <header class="bg-white shadow">
+                        <div class="max-w-4xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+                            <h1 class="text-2xl sm:text-3xl font-bold text-indigo-600">🤖 Chatbot Utils</h1>
+                            <p class="text-gray-600 text-sm">Công cụ hỗ trợ quản lý chatbot</p>
+                            <p class="text-indigo-500 font-semibold mt-2">👋 Xin chào, {{ username }}!</p>
+                        </div>
+                    </header>
+
+                    <!-- Main Content -->
+                    <main class="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+                        <!-- Menu Page -->
+                        <div v-if="currentPage === 'menu'" class="space-y-4">
+                            <div class="bg-white rounded-lg shadow-lg p-8">
+                                <h2 class="text-2xl font-bold text-gray-800 mb-8 text-center">Chọn chức năng</h2>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <!-- Create Reminder Button -->
+                                    <button 
+                                        @click="goToCreateReminder"
+                                        class="p-6 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md transition transform hover:scale-105 active:scale-95"
+                                    >
+                                        <div class="text-4xl mb-3">📝</div>
+                                        <h3 class="text-xl font-bold">Tạo nhắc nhở</h3>
+                                        <p class="text-sm text-blue-100 mt-2">Tạo nhắc nhở cho các thành viên</p>
+                                    </button>
+
+                                    <!-- About Button -->
+                                    <button 
+                                        @click="goToAbout"
+                                        class="p-6 bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md transition transform hover:scale-105 active:scale-95"
+                                    >
+                                        <div class="text-4xl mb-3">ℹ️</div>
+                                        <h3 class="text-xl font-bold">Giới thiệu</h3>
+                                        <p class="text-sm text-purple-100 mt-2">Tìm hiểu về ứng dụng này</p>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Create Reminder Page -->
+                        <div v-if="currentPage === 'createReminder'" class="bg-white rounded-lg shadow-lg p-8">
+                            <h2 class="text-2xl font-bold text-gray-800 mb-8">📝 Tạo nhắc nhở</h2>
+                            
+                            <!-- Loading Indicator -->
+                            <div v-if="isLoading" class="mb-6 p-4 bg-blue-100 border border-blue-300 rounded-lg text-blue-700">
+                                ⏳ Đang tải danh sách nhắc nhở...
+                            </div>
+                            
+                            <!-- Error Message -->
+                            <div v-if="errorMessage" class="mb-6 p-4 bg-red-100 border border-red-300 rounded-lg text-red-700">
+                                ⚠️ {{ errorMessage }}
+                            </div>
+
+                            <!-- Reminders List (Above Form) -->
+                            <div v-if="reminders.length > 0" class="mb-8 bg-blue-50 rounded-lg p-6 border border-blue-200">
+                                <h3 class="text-lg font-bold text-gray-800 mb-4">📋 Danh sách nhắc nhở hiện tại ({{ reminders.length }})</h3>
+                                <div class="space-y-3 max-h-96 overflow-y-auto">
+                                    <div 
+                                        v-for="(reminder, index) in reminders" 
+                                        :key="reminder.id"
+                                        class="p-4 border-l-4 border-blue-500 bg-white rounded"
+                                    >
+                                        <div class="flex justify-between items-start">
+                                            <div class="flex-1">
+                                                <p class="font-semibold text-gray-800 text-lg">#{{index + 1}}: 👤 {{ reminder.person }}</p>
+                                                <p class="text-gray-700 mt-2">{{ reminder.content }}</p>
+                                                <p class="text-sm text-gray-600 mt-2">
+                                                    🕐 {{ reminder.time }}
+                                                </p>
+                                                <p class="text-sm text-gray-600">
+                                                    🔄 {{ reminder.repeatType === 'no' ? 'Không lặp' : reminder.repeatType === 'day' ? 'Hàng ngày' : reminder.repeatType === 'week' ? 'Hàng tuần' : reminder.repeatType === 'month' ? 'Hàng tháng' : reminder.repeatType === 'weekday' ? 'Ngày trong tuần' : 'Cuối tuần' }}
+                                                </p>
+                                            </div>
+                                            <button 
+                                                @click="deleteReminder(reminder.id)"
+                                                class="ml-4 px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm transition flex-shrink-0"
+                                            >
+                                                Xóa
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Form Section -->
+                            <div class="border-t border-gray-200 pt-8">
+                                <h3 class="text-xl font-bold text-gray-800 mb-6">Tạo nhắc nhở mới</h3>
+                            <form @submit.prevent="createReminder" class="space-y-6">
+                                <!-- Select Person -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">1. Chọn người để nhắc nhở</label>
+                                    <select 
+                                        v-model="formData.person"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <option value="">-- Chọn người --</option>
+                                        <option v-for="person in people" :key="person.value" :value="person.value">
+                                            {{ person.name }}
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <!-- Input Content -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">2. Nhập nội dung nhắc nhở</label>
+                                    <textarea 
+                                        v-model="formData.content"
+                                        placeholder="Nhập nội dung nhắc nhở..."
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                        rows="4"
+                                    ></textarea>
+                                </div>
+
+                                <!-- Select Time -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">3. Chọn thời gian</label>
+                                    <input 
+                                        v-model="formData.time"
+                                        type="datetime-local"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
+
+                                <!-- Select Repeat Type -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">4. Chọn kiểu lặp lại</label>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <label 
+                                            v-for="type in repeatTypes" 
+                                            :key="type.value"
+                                            class="flex items-center p-3 border-2 rounded-lg cursor-pointer transition"
+                                            :class="formData.repeatType === type.value ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'"
+                                        >
+                                            <input 
+                                                type="radio" 
+                                                :value="type.value" 
+                                                v-model="formData.repeatType"
+                                                class="w-4 h-4"
+                                            />
+                                            <span class="ml-3 text-gray-700">{{ type.label }}</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="flex gap-4 pt-6">
+                                    <button 
+                                        type="submit"
+                                        class="flex-1 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition"
+                                    >
+                                        ✓ Tạo nhắc nhở
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        @click="goToMenu"
+                                        class="flex-1 px-6 py-3 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold rounded-lg transition"
+                                    >
+                                        ✕ Hủy
+                                    </button>
+                                </div>
+                            </form>
+                            </div>
+                        </div>
+
+                        <!-- About Page -->
+                        <div v-if="currentPage === 'about'" class="bg-white rounded-lg shadow-lg p-8">
+                            <h2 class="text-2xl font-bold text-gray-800 mb-6">ℹ️ Giới thiệu</h2>
+                            
+                            <div class="space-y-4 text-gray-700">
+                                <div>
+                                    <h3 class="text-lg font-bold text-indigo-600 mb-2">🎯 Về ứng dụng</h3>
+                                    <p>Chatbot Utils là ứng dụng web hỗ trợ quản lý các tiện ích cho chatbot, giúp bạn tạo và quản lý nhắc nhở dễ dàng.</p>
+                                </div>
+
+                                <div>
+                                    <h3 class="text-lg font-bold text-indigo-600 mb-2">✨ Tính năng chính</h3>
+                                    <ul class="list-disc list-inside space-y-1 ml-2">
+                                        <li>📝 Tạo nhắc nhở cho các thành viên</li>
+                                        <li>👤 Chọn người nhận nhắc nhở</li>
+                                        <li>🕐 Đặt thời gian nhắc nhở cụ thể</li>
+                                        <li>🔄 Cấu hình lặp lại hàng ngày, tuần, tháng</li>
+                                        <li>📋 Quản lý danh sách nhắc nhở</li>
+                                        <li>📱 Giao diện responsive cho máy tính và điện thoại</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <h3 class="text-lg font-bold text-indigo-600 mb-2">💻 Công nghệ</h3>
+                                    <ul class="list-disc list-inside space-y-1 ml-2">
+                                        <li>Vue 3 (Progressive Web App)</li>
+                                        <li>Tailwind CSS</li>
+                                        <li>JavaScript ES6+</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <h3 class="text-lg font-bold text-indigo-600 mb-2">📌 Hướng dẫn sử dụng</h3>
+                                    <ol class="list-decimal list-inside space-y-1 ml-2">
+                                        <li>Chọn "Tạo nhắc nhở" từ menu</li>
+                                        <li>Chọn người bạn muốn nhắc nhở</li>
+                                        <li>Nhập nội dung nhắc nhở</li>
+                                        <li>Chọn thời gian nhắc nhở</li>
+                                        <li>Chọn kiểu lặp lại (nếu cần)</li>
+                                        <li>Nhấn "Tạo nhắc nhở" để lưu</li>
+                                    </ol>
+                                </div>
+                            </div>
+
+                            <button 
+                                @click="goToMenu"
+                                class="mt-8 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition"
+                            >
+                                ← Quay lại Menu
+                            </button>
+                        </div>
+                    </main>
+
+                    <!-- Footer -->
+                    <footer class="bg-white border-t border-gray-200 mt-12">
+                        <div class="max-w-4xl mx-auto px-4 py-6 sm:px-6 lg:px-8 text-center text-gray-600 text-sm">
+                            <p>© 2025 Chatbot Utils | Công cụ hỗ trợ chatbot</p>
+                        </div>
+                    </footer>
+                </div>
+            `
+        };
+
+        createApp(App).mount('#app');
+    </script>
+</body>
+</html>
