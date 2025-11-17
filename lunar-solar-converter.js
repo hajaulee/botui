@@ -212,3 +212,6 @@ function lunarToSolar({year, month, day}){
   const solar = converter.LunarToSolar(lunar);
   return solar
 }
+
+// ES6 Module export
+export { Lunar, Solar, LunarSolarConverter, lunarToSolar, solarToLunar };

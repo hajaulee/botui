@@ -12,8 +12,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Vue 3 CDN -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <!-- Local JS -->
-     <script src="lunar-solar-converter.js"></script>
     <style>
         .font-mono {
             font-family: 'Roboto Mono', monospace !important;
@@ -23,8 +21,9 @@
 <body class="bg-gray-50">
     <div id="app" class="min-h-screen"></div>
 
-    <script>
-        /* global lunarToSolar */
+    <script type="module">
+        import { lunarToSolar } from './lunar-solar-converter.js';
+        
         const { createApp, ref, reactive, onMounted } = Vue;
 
         const App = {
