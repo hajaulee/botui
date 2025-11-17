@@ -469,7 +469,7 @@
                         isLunarEventLoading.value = true;
                         lunarEventMessage.value = '';
 
-                        const apiUrl = `https://script.google.com/macros/s/${apiId}/exec?target=lunarEvents&action=get&username=common`;
+                        const apiUrl = `https://script.google.com/macros/s/${apiId}/exec?target=lunarEvents&action=load&username=common`;
                         const response = await fetch(apiUrl);
 
                         if (!response.ok) {
