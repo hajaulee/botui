@@ -433,12 +433,12 @@
                         const eventName = parts[1];
 
                         // Calculate current year occurrence
-                        let eventDate = new Date(today.getFullYear(), solarDate.solarMonth, solarDate.solarDay);
+                        let eventDate = new Date(today.getFullYear(), solarDate.solarMonth - 1, solarDate.solarDay);
 
                         let daysLeft = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
                         if (daysLeft < -200) {
                             // If event has passed this year, calculate for next year
-                            eventDate = new Date(today.getFullYear() + 1, solarDate.solarMonth, solarDate.solarDay);
+                            eventDate = new Date(today.getFullYear() + 1, solarDate.solarMonth - 1, solarDate.solarDay);
                             daysLeft = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
                         }
 
