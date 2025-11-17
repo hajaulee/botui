@@ -80,6 +80,29 @@
                     { value: 'weekend', label: 'Cuối tuần' }
                 ];
 
+                // Cache Helper Functions - Using URL query as cache key
+                const getCacheData = (apiUrl) => {
+                    try {
+                        const url = new URL(apiUrl);
+                        const cacheKey = `botui_cache_${url.search}`;
+                        const data = localStorage.getItem(cacheKey);
+                        return data ? JSON.parse(data) : null;
+                    } catch (error) {
+                        console.error('Lỗi khi đọc cache:', error);
+                        return null;
+                    }
+                };
+
+                const setCacheData = (apiUrl, data) => {
+                    try {
+                        const url = new URL(apiUrl);
+                        const cacheKey = `botui_cache_${url.search}`;
+                        localStorage.setItem(cacheKey, JSON.stringify(data));
+                    } catch (error) {
+                        console.error('Lỗi khi ghi cache:', error);
+                    }
+                };
+
                 // Lifecycle Hooks
                 onMounted(() => {
                     const initialPageMap = {
@@ -131,8 +154,16 @@
                 const fetchReminders = async () => {
                     isLoading.value = true;
                     errorMessage.value = '';
+                    
+                    const apiUrl = `https://script.google.com/macros/s/${apiId}/exec?msg=list_remind&userId=${userId}`;
+                    
+                    // Hiển thị dữ liệu từ cache trước
+                    const cachedReminders = getCacheData(apiUrl);
+                    if (cachedReminders) {
+                        reminders.value = cachedReminders;
+                    }
+                    
                     try {
-                        const apiUrl = `https://script.google.com/macros/s/${apiId}/exec?msg=list_remind&userId=${userId}`;
                         const response = await fetch(apiUrl);
                         
                         if (!response.ok) {
@@ -188,6 +219,8 @@
                         } else {
                             reminders.value = [];
                         }
+                        // Lưu vào cache
+                        setCacheData(apiUrl, reminders.value);
                     } catch (error) {
                         console.error('Lỗi khi lấy danh sách nhắc nhở:', error);
                         errorMessage.value = 'Không thể tải danh sách nhắc nhở. Vui lòng thử lại.';
@@ -281,6 +314,14 @@
                         familyMessage.value = '';
                         
                         const apiUrl = `https://script.google.com/macros/s/${apiId}/exec?target=family&action=load&username=${encodeURIComponent(familyPerson.value)}`;
+                        
+                        // Hiển thị dữ liệu từ cache trước
+                        const cachedFamilyTree = getCacheData(apiUrl);
+                        if (cachedFamilyTree) {
+                            familyText.value = cachedFamilyTree;
+                            parseAndRenderFamilyTree();
+                        }
+                        
                         const response = await fetch(apiUrl);
                         
                         if (!response.ok) {
@@ -294,6 +335,8 @@
                             familyText.value = data.content;
                             parseAndRenderFamilyTree();
                             familyMessage.value = 'Tải cây gia phả thành công!';
+                            // Lưu vào cache
+                            setCacheData(apiUrl, data.content);
                             setTimeout(() => {
                                 familyMessage.value = '';
                             }, 3000);
@@ -465,11 +508,18 @@
                 };
 
                 const loadLunarEvents = async () => {
+                    const apiUrl = `https://script.google.com/macros/s/${apiId}/exec?target=lunarEvents&action=load&username=common`;
+                    // Hiển thị dữ liệu từ cache trước
+                    const cachedLunarEvents = getCacheData(apiUrl);
+                    if (cachedLunarEvents) {
+                        lunarEventsInput.value = cachedLunarEvents;
+                        lunarEvents.value = parseLunarEvents(cachedLunarEvents);
+                    }
                     try {
                         isLunarEventLoading.value = true;
                         lunarEventMessage.value = '';
 
-                        const apiUrl = `https://script.google.com/macros/s/${apiId}/exec?target=lunarEvents&action=load&username=common`;
+                        
                         const response = await fetch(apiUrl);
 
                         if (!response.ok) {
@@ -481,6 +531,7 @@
                         if (data.content) {
                             lunarEventsInput.value = data.content;
                             lunarEvents.value = parseLunarEvents(data.content);
+                            setCacheData(apiUrl, data.content);
                         } else {
                             lunarEventsInput.value = '';
                             lunarEvents.value = [];
