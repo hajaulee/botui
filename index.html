@@ -22,7 +22,7 @@
     <div id="app" class="min-h-screen"></div>
 
     <script>
-        const { createApp, ref, reactive } = Vue;
+        const { createApp, ref, reactive, onMounted } = Vue;
 
         const App = {
             setup() {
@@ -32,9 +32,10 @@
                 const apiId = urlParams.get('apiId') || localStorage.getItem('apiId');
                 const userId = urlParams.get('userId') || localStorage.getItem('userId');
                 const username = urlParams.get('username') || 'Bạn, Bạn không thể dùng ứng dụng này nếu không có thông tin cấu hình đúng!';
-                
+                const initialPage = urlParams.get('page') || 'menu'; // Default to 'menu' page
+
                 // State
-                const currentPage = ref('menu'); // menu, createReminder, about, family
+                const currentPage = ref(initialPage); // menu, createReminder, about, family
                 const reminders = ref([]);
                 const isLoading = ref(false);
                 const isDeleting = ref(false);
@@ -69,6 +70,21 @@
                     { value: 'weekday', label: 'Ngày trong tuần' },
                     { value: 'weekend', label: 'Cuối tuần' }
                 ];
+
+                // Lifecycle Hooks
+                onMounted(() => {
+                    const initialPageMap = {
+                        'menu': goToMenu,
+                        'createReminder': goToCreateReminder,
+                        'about': goToAbout,
+                        'family': goToFamily
+                    }
+                    if (initialPageMap[initialPage]) {
+                        initialPageMap[initialPage]();
+                    } else {
+                        goToMenu();
+                    }
+                });
 
                 // Methods
                 const goToMenu = () => {
