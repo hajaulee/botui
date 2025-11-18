@@ -1,16 +1,29 @@
 /**
- * useMemories Composable
- * Quản lý state và logic cho kỷ niệm
+ * useMemories Composable v2 (API Integration)
+ * Quản lý state và logic cho kỷ niệm với API backend
+ * - Lazy load memory details khi scroll đến
+ * - Show skeleton khi loading
+ * - Filter isDeleted items
  */
 
 import { memoriesService } from '../services/memoriesService.js';
+import { APIService } from '../services/apiService.js';
 
-export function useMemories() {
+export function useMemories(apiId) {
+  // Validate apiId
+  if (!apiId) {
+    throw new Error('apiId là bắt buộc để sử dụng useMemories');
+  }
+
+  // Initialize APIService
+  const apiService = new APIService(apiId);
   const { ref, reactive } = Vue;
 
   // State
-  const memories = ref([]);
-  const filteredMemories = ref([]);
+  const memoriesBasic = ref([]); // Basic list từ API (id, title, eventDate)
+  const memoriesDetail = ref({}); // Detail cache: { [id]: fullMemoryObject }
+  const loadingMemoryIds = ref(new Set()); // IDs đang load
+  const filteredMemories = ref([]); // Final list để display
   const searchQuery = ref('');
   const isLoading = ref(false);
   const isLoadingMore = ref(false);
@@ -32,42 +45,66 @@ export function useMemories() {
   });
 
   /**
-   * Load tất cả kỷ niệm
+   * Tải danh sách basic memories từ API
    */
-  const loadMemories = async () => {
+  const loadMemoriesList = async () => {
     isLoading.value = true;
     errorMessage.value = '';
 
     try {
-      const allMemories = await memoriesService.getAllMemories();
-      memories.value = allMemories;
+      const list = await apiService.getMemoriesList();
+      memoriesBasic.value = list;
+      memoriesDetail.value = {};
+      loadingMemoryIds.value.clear();
       currentPage.value = 0;
+      
       await filterAndPaginate();
     } catch (error) {
-      console.error('Error loading memories:', error);
-      errorMessage.value = 'Lỗi khi tải kỷ niệm';
+      console.error('❌ Error loading memories list:', error);
+      errorMessage.value = error.message || 'Lỗi khi tải danh sách kỷ niệm';
     } finally {
       isLoading.value = false;
     }
   };
 
   /**
-   * Tìm kiếm kỷ niệm
+   * Lazy load chi tiết memory (gọi khi scroll đến hoặc click expand)
+   * @param {number|string} memoryId
    */
-  const searchMemories = async () => {
-    isLoading.value = true;
-    errorMessage.value = '';
+  const lazyLoadMemory = async (memoryId) => {
+    // Nếu đã có detail, skip
+    if (memoriesDetail.value[memoryId]) {
+      return memoriesDetail.value[memoryId];
+    }
+
+    // Nếu đang load, skip
+    if (loadingMemoryIds.value.has(memoryId)) {
+      return null;
+    }
+
+    loadingMemoryIds.value.add(memoryId);
 
     try {
-      const results = await memoriesService.searchMemories(searchQuery.value);
-      memories.value = results;
-      currentPage.value = 0;
-      await filterAndPaginate();
+      const detail = await apiService.loadMemory(memoryId);
+      
+      if (detail) {
+        // Add date info
+        const dateInfo = memoriesService.calculateDaysRemaining(detail.eventDate);
+        detail.daysInfo = dateInfo;
+        
+        // Cache detail
+        memoriesDetail.value[memoryId] = detail;
+        
+        // Update filtered memories để hiển thị detail mới
+        await filterAndPaginate();
+      }
+
+      return detail;
     } catch (error) {
-      console.error('Error searching memories:', error);
-      errorMessage.value = 'Lỗi khi tìm kiếm kỷ niệm';
+      console.error(`❌ Error lazy loading memory ${memoryId}:`, error);
+      return null;
     } finally {
-      isLoading.value = false;
+      loadingMemoryIds.value.delete(memoryId);
     }
   };
 
@@ -78,25 +115,38 @@ export function useMemories() {
     const start = currentPage.value * pageSize;
     const end = start + pageSize;
     
-    const paginated = memories.value.slice(start, end);
+    const paginated = memoriesBasic.value.slice(start, end);
     
-    // Thêm thông tin ngày còn lại
-    paginated.forEach(memory => {
-      const dateInfo = memoriesService.calculateDaysRemaining(memory.eventDate);
-      memory.daysInfo = dateInfo;
+    // Map basic info với detail (nếu có) hoặc placeholder
+    const displayMemories = paginated.map(basic => {
+      const detail = memoriesDetail.value[basic.id];
+      
+      if (detail) {
+        return detail;
+      }
+
+      // Thêm basic info + placeholder
+      const dateInfo = memoriesService.calculateDaysRemaining(basic.eventDate);
+      return {
+        ...basic,
+        daysInfo: dateInfo,
+        text: '',
+        imageBase64: '',
+        isLoading: loadingMemoryIds.value.has(basic.id)
+      };
     });
 
-    filteredMemories.value = paginated;
+    filteredMemories.value = displayMemories;
   };
 
   /**
-   * Load thêm kỷ niệm (infinite scroll)
+   * Load thêm memories (infinite scroll)
    */
   const loadMore = async () => {
     const nextPage = currentPage.value + 1;
     const start = nextPage * pageSize;
 
-    if (start >= memories.value.length) {
+    if (start >= memoriesBasic.value.length) {
       return;
     }
 
@@ -106,7 +156,7 @@ export function useMemories() {
       currentPage.value = nextPage;
       await filterAndPaginate();
     } catch (error) {
-      console.error('Error loading more memories:', error);
+      console.error('❌ Error loading more:', error);
       errorMessage.value = 'Lỗi khi tải thêm kỷ niệm';
     } finally {
       isLoadingMore.value = false;
@@ -114,7 +164,37 @@ export function useMemories() {
   };
 
   /**
-   * Mở modal thêm kỷ niệm
+   * Tìm kiếm (search local trong basic list)
+   */
+  const searchMemories = async () => {
+    isLoading.value = true;
+    errorMessage.value = '';
+
+    try {
+      if (!searchQuery.value.trim()) {
+        await loadMemoriesList();
+        return;
+      }
+
+      // Filter local
+      const query = searchQuery.value.toLowerCase();
+      const filtered = memoriesBasic.value.filter(m =>
+        m.title.toLowerCase().includes(query)
+      );
+
+      memoriesBasic.value = filtered;
+      currentPage.value = 0;
+      await filterAndPaginate();
+    } catch (error) {
+      console.error('❌ Error searching:', error);
+      errorMessage.value = 'Lỗi khi tìm kiếm';
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  /**
+   * Mở modal thêm
    */
   const openAddModal = () => {
     editingMemory.value = null;
@@ -126,7 +206,7 @@ export function useMemories() {
   };
 
   /**
-   * Mở modal chỉnh sửa kỷ niệm
+   * Mở modal sửa
    */
   const openEditModal = (memory) => {
     editingMemory.value = memory.id;
@@ -152,26 +232,26 @@ export function useMemories() {
   };
 
   /**
-   * Xử lý upload ảnh
+   * Handle upload image
    */
   const handleImageUpload = async (file) => {
     try {
       formData.imageBase64 = await memoriesService.fileToBase64(file);
     } catch (error) {
-      console.error('Error uploading image:', error);
+      console.error('❌ Error uploading image:', error);
       errorMessage.value = 'Lỗi khi upload ảnh';
     }
   };
 
   /**
-   * Xóa ảnh
+   * Remove image
    */
   const removeImage = () => {
     formData.imageBase64 = '';
   };
 
   /**
-   * Lưu kỷ niệm (thêm hoặc sửa)
+   * Lưu memory (create/update)
    */
   const saveMemory = async () => {
     // Validate
@@ -191,42 +271,48 @@ export function useMemories() {
 
     try {
       if (editingMemory.value) {
-        // Cập nhật
-        await memoriesService.updateMemory(editingMemory.value, {
+        // Update via API
+        const updated = await apiService.updateMemory(editingMemory.value, {
           title: formData.title,
           text: formData.text,
           eventDate: formData.eventDate,
           imageBase64: formData.imageBase64
         });
-        successMessage.value = 'Cập nhật kỷ niệm thành công!';
+
+        // Update cache
+        memoriesDetail.value[editingMemory.value] = updated;
+        successMessage.value = '✅ Cập nhật thành công!';
       } else {
-        // Tạo mới
-        await memoriesService.createMemory({
+        // Create via API
+        const created = await apiService.createMemory({
           title: formData.title,
           text: formData.text,
           eventDate: formData.eventDate,
           imageBase64: formData.imageBase64
         });
-        successMessage.value = 'Thêm kỷ niệm thành công!';
+
+        successMessage.value = '✅ Thêm thành công!';
+
+        // Clear cache để reload từ API
+        memoriesDetail.value = {};
       }
 
-      // Reload memories
-      await loadMemories();
-      
-      // Đóng modal sau 1 giây
+      // Reload list
+      await loadMemoriesList();
+
       setTimeout(() => {
         closeModal();
       }, 1000);
     } catch (error) {
-      console.error('Error saving memory:', error);
-      errorMessage.value = 'Lỗi khi lưu kỷ niệm';
+      console.error('❌ Error saving memory:', error);
+      errorMessage.value = error.message || 'Lỗi khi lưu kỷ niệm';
     } finally {
       isLoading.value = false;
     }
   };
 
   /**
-   * Xóa kỷ niệm
+   * Xóa memory (soft delete)
    */
   const deleteMemory = async (id) => {
     if (!confirm('Bạn có chắc chắn muốn xóa kỷ niệm này?')) {
@@ -237,28 +323,49 @@ export function useMemories() {
     errorMessage.value = '';
 
     try {
-      await memoriesService.deleteMemory(id);
-      successMessage.value = 'Xóa kỷ niệm thành công!';
-      await loadMemories();
+      // Get current data
+      const data = memoriesDetail.value[id] || memoriesBasic.value.find(m => m.id === id) || {};
+
+      await apiService.deleteMemory(id, data);
+      
+      successMessage.value = '✅ Xóa thành công!';
+
+      // Reload list
+      await loadMemoriesList();
     } catch (error) {
-      console.error('Error deleting memory:', error);
-      errorMessage.value = 'Lỗi khi xóa kỷ niệm';
+      console.error('❌ Error deleting memory:', error);
+      errorMessage.value = error.message || 'Lỗi khi xóa kỷ niệm';
     } finally {
       isLoading.value = false;
     }
   };
 
   /**
-   * Kiểm tra xem có thêm kỷ niệm để tải không
+   * Kiểm tra còn memory để load không
    */
   const hasMore = () => {
     const totalLoaded = (currentPage.value + 1) * pageSize;
-    return totalLoaded < memories.value.length;
+    return totalLoaded < memoriesBasic.value.length;
+  };
+
+  /**
+   * Kiểm tra memory có đang load không
+   */
+  const isMemoryLoading = (id) => {
+    return loadingMemoryIds.value.has(id);
+  };
+
+  /**
+   * Lấy memory detail (nếu có)
+   */
+  const getMemoryDetail = (id) => {
+    return memoriesDetail.value[id] || null;
   };
 
   return {
     // State
-    memories,
+    memoriesBasic,
+    memoriesDetail,
     filteredMemories,
     searchQuery,
     isLoading,
@@ -270,9 +377,11 @@ export function useMemories() {
     formData,
 
     // Methods
-    loadMemories,
-    searchMemories,
+    loadMemoriesList,
+    lazyLoadMemory,
+    filterAndPaginate,
     loadMore,
+    searchMemories,
     openAddModal,
     openEditModal,
     closeModal,
@@ -280,6 +389,8 @@ export function useMemories() {
     removeImage,
     saveMemory,
     deleteMemory,
-    hasMore
+    hasMore,
+    isMemoryLoading,
+    getMemoryDetail
   };
 }

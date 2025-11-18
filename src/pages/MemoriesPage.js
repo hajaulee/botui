@@ -3,7 +3,7 @@
  * Trang chính để quản lý kỷ niệm (API version)
  */
 
-import { useMemoriesApi } from '../composables/useMemoriesApi.js';
+import { useMemories } from '../composables/useMemories.js';
 import MemoryCard from '../components/MemoryCard.js';
 import SkeletonMemoryCard from '../components/SkeletonMemoryCard.js';
 import AddMemoryModal from '../components/AddMemoryModal.js';
@@ -182,7 +182,7 @@ export default {
   },
 
   setup(props) {
-    const composable = useMemoriesApi(props.apiId);
+    const composable = useMemories(props.apiId);
 
     // Load memories list on mount
     const { onMounted } = Vue;
