@@ -134,7 +134,7 @@ export default {
         <!-- Memory Card or Skeleton -->
         <template v-for="memory in filteredMemories" :key="memory.id">
           <!-- Show skeleton while loading detail -->
-          <SkeletonMemoryCard v-if="isMemoryLoading(memory.id)" />
+          <SkeletonMemoryCard v-if="isMemoryLoading(memory.id)" :memory="memory" />
           
           <!-- Show full card when loaded -->
           <MemoryCard
