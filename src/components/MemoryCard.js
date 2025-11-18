@@ -42,39 +42,37 @@ export default {
   },
 
   template: /* html */`
-    <div class="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl overflow-hidden transition-all duration-300 hover:scale-105">
-      <!-- Gradient Border Top -->
-      <div class="h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500"></div>
-
+    <div class="card" style="display: flex; flex-direction: column;">
       <!-- Header -->
-      <div class="px-5 py-4 flex justify-between items-start">
+      <div class="card-header" style="justify-content: space-between;">
         <div class="flex-1">
-          <div class="flex items-center gap-3 mb-3">
-            <span class="text-2xl transform group-hover:scale-125 transition duration-300">🎉</span>
-            <h3 class="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{{ memory.title }}</h3>
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+            <span style="font-size: 1.5rem;">🎉</span>
+            <h3 class="card-title" style="margin: 0;">{{ memory.title }}</h3>
           </div>
           
           <!-- Date Info -->
-          <div class="text-xs text-gray-500 space-y-1">
-            <div class="flex items-center gap-2">
-              <span class="text-gray-400">📅</span>
-              <span class="font-medium text-gray-700">{{ memory.daysInfo?.dateFormatted }}</span>
+          <div style="font-size: 0.75rem; color: var(--text-tertiary); display: flex; flex-direction: column; gap: 0.25rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span>📅</span>
+              <span style="color: var(--text-secondary); font-weight: 600;">{{ memory.daysInfo?.dateFormatted }}</span>
             </div>
             <div>
-              <span v-if="memory.daysInfo?.isPast" class="inline-block px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">{{ memory.daysInfo?.label }}</span>
-              <span v-else-if="memory.daysInfo?.label === 'Hôm nay'" class="inline-block px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-semibold animate-pulse">🔴 {{ memory.daysInfo?.label }}</span>
-              <span v-else-if="memory.daysInfo?.label === 'Ngày mai'" class="inline-block px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold">⭐ {{ memory.daysInfo?.label }}</span>
-              <span v-else class="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">📌 {{ memory.daysInfo?.label }}</span>
+              <span v-if="memory.daysInfo?.isPast" class="badge badge-primary">{{ memory.daysInfo?.label }}</span>
+              <span v-else-if="memory.daysInfo?.label === 'Hôm nay'" class="badge badge-error" style="animation: pulse 2s infinite;">🔴 {{ memory.daysInfo?.label }}</span>
+              <span v-else-if="memory.daysInfo?.label === 'Ngày mai'" class="badge badge-warning">⭐ {{ memory.daysInfo?.label }}</span>
+              <span v-else class="badge badge-info">📌 {{ memory.daysInfo?.label }}</span>
             </div>
           </div>
         </div>
 
         <!-- Menu Button -->
-        <div class="relative">
+        <div style="position: relative;">
           <button
             @click="showMenu = !showMenu"
-            class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition p-2 text-xl rounded-lg"
+            class="btn btn-text"
             title="Menu"
+            style="padding: 0.5rem; font-size: 1.25rem;"
           >
             ⋮
           </button>
@@ -82,18 +80,22 @@ export default {
           <!-- Dropdown Menu -->
           <div
             v-if="showMenu"
-            class="absolute right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-xl z-10 min-w-40 overflow-hidden"
+            style="position: absolute; right: 0; top: 100%; background-color: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); z-index: 10; min-width: 160px; overflow: hidden; margin-top: 0.5rem;"
             @click.stop
           >
             <button
               @click="() => { $emit('edit'); showMenu = false; }"
-              class="w-full text-left px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition text-sm flex items-center gap-3 border-b border-gray-100 last:border-b-0"
+              style="width: 100%; text-align: left; padding: 0.75rem 1rem; color: var(--text-secondary); background: transparent; border: none; cursor: pointer; font-size: 0.875rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid var(--border); transition: var(--transition);"
+              @mouseover="e => e.target.style.backgroundColor = 'var(--bg-secondary)'"
+              @mouseout="e => e.target.style.backgroundColor = 'transparent'"
             >
               <span>✏️</span> Chỉnh sửa
             </button>
             <button
               @click="() => { $emit('delete'); showMenu = false; }"
-              class="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 transition text-sm flex items-center gap-3"
+              style="width: 100%; text-align: left; padding: 0.75rem 1rem; color: var(--danger); background: transparent; border: none; cursor: pointer; font-size: 0.875rem; display: flex; align-items: center; gap: 0.75rem; transition: var(--transition);"
+              @mouseover="e => e.target.style.backgroundColor = 'rgba(239, 68, 68, 0.05)'"
+              @mouseout="e => e.target.style.backgroundColor = 'transparent'"
             >
               <span>🗑️</span> Xóa
             </button>
@@ -102,28 +104,35 @@ export default {
       </div>
 
       <!-- Image -->
-      <div v-if="memory.imageBase64" class="relative w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
+      <div v-if="memory.imageBase64" style="width: 100%; height: 12rem; background: linear-gradient(to bottom right, var(--bg-secondary), var(--border)); overflow: hidden; border-radius: var(--radius-lg); margin-bottom: 1rem;">
         <img 
           :src="memory.imageBase64" 
           :alt="memory.title"
-          class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+          style="width: 100%; height: 100%; object-fit: cover; transition: transform 500ms ease-out;"
+          @mouseover="e => e.target.style.transform = 'scale(1.1)'"
+          @mouseout="e => e.target.style.transform = 'scale(1)'"
         />
-        <div class="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent"></div>
       </div>
 
       <!-- Content -->
-      <div class="px-5 py-4 space-y-3">
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; flex: 1;">
         <p 
           v-if="memory.text"
-          :class="[
-            'text-gray-600 text-sm leading-relaxed font-medium',
-            { 'line-clamp-3': !isExpanded }
-          ]"
+          :style="{
+            color: 'var(--text-secondary)',
+            fontSize: '0.9rem',
+            lineHeight: 1.6,
+            fontWeight: 500,
+            display: isExpanded ? 'block' : '-webkit-box',
+            WebkitLineClamp: isExpanded ? 'unset' : '3',
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden'
+          }"
         >
           {{ memory.text }}
         </p>
 
-        <p v-else class="text-gray-400 italic text-sm">
+        <p v-else style="color: var(--text-tertiary); font-style: italic; font-size: 0.875rem;">
           (Không có mô tả)
         </p>
 
@@ -131,7 +140,8 @@ export default {
         <button
           v-if="memory.text && memory.text.length > 200"
           @click="isExpanded = !isExpanded"
-          class="text-blue-600 hover:text-blue-700 text-xs font-bold mt-2 transition hover:gap-1 flex items-center gap-0.5"
+          class="btn btn-text"
+          style="padding: 0; font-size: 0.8rem; justify-content: flex-start; margin-top: 0.5rem;"
         >
           {{ isExpanded ? '← Thu gọn' : 'Xem thêm →' }}
         </button>

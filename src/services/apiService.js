@@ -151,6 +151,9 @@ export class APIService {
      */
     async loadMemory(memoryId, basicInfoUpdatedAt = null) {
 
+        // Sleep to simulate loading delay (for testing)
+        // await new Promise(resolve => setTimeout(resolve, 1000000));
+
         // Cố lấy từ cache IndexedDB trước
         const cached = await this.getCachedMemoryDetail(memoryId, basicInfoUpdatedAt);
         if (cached) {            

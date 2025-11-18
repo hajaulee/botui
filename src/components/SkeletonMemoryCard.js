@@ -17,44 +17,40 @@ export default {
   },
 
   template: /* html */`
-    <div class="animate-pulse">
-      <div class="group relative bg-white rounded-2xl shadow-lg overflow-hidden">
-        <!-- Gradient Border Top -->
-        <div class="h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500"></div>
-
+    <div class="animate-pulse" style="width: 100%;">
+      <div class="card" style="display: flex; flex-direction: column; width: 100%; overflow: hidden;">
         <!-- Header -->
-        <div class="px-5 py-4 space-y-3">
-          <!-- Title (thực, không skeleton) -->
-          <div class="flex items-center gap-3 mb-3">
-            <span class="text-2xl">🎉</span>
-            <h3 class="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{{ memory.title }}</h3>
-          </div>
-          
-          <!-- Date Info (thực, không skeleton) -->
-          <div class="text-xs text-gray-500 space-y-1">
-            <div class="flex items-center gap-2">
-              <span class="text-gray-400">📅</span>
-              <span class="font-medium text-gray-700">{{ memory.daysInfo?.dateFormatted }}</span>
+        <div class="card-header" style="justify-content: space-between;">
+          <div class="flex-1">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+              <span style="font-size: 1.5rem;">🎉</span>
+              <h3 class="card-title" style="margin: 0;">{{ memory.title }}</h3>
             </div>
-            <div>
-              <span v-if="memory.daysInfo?.isPast" class="inline-block px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">{{ memory.daysInfo?.label }}</span>
-              <span v-else-if="memory.daysInfo?.label === 'Hôm nay'" class="inline-block px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-semibold animate-pulse">🔴 {{ memory.daysInfo?.label }}</span>
-              <span v-else-if="memory.daysInfo?.label === 'Ngày mai'" class="inline-block px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold">⭐ {{ memory.daysInfo?.label }}</span>
-              <span v-else class="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">📌 {{ memory.daysInfo?.label }}</span>
+            
+            <!-- Date Info -->
+            <div style="font-size: 0.75rem; color: var(--text-tertiary); display: flex; flex-direction: column; gap: 0.25rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span>📅</span>
+                <span style="color: var(--text-secondary); font-weight: 600;">{{ memory.daysInfo?.dateFormatted }}</span>
+              </div>
+              <div>
+                <span v-if="memory.daysInfo?.isPast" class="badge badge-primary">{{ memory.daysInfo?.label }}</span>
+                <span v-else-if="memory.daysInfo?.label === 'Hôm nay'" class="badge badge-error" style="animation: pulse 2s infinite;">🔴 {{ memory.daysInfo?.label }}</span>
+                <span v-else-if="memory.daysInfo?.label === 'Ngày mai'" class="badge badge-warning">⭐ {{ memory.daysInfo?.label }}</span>
+                <span v-else class="badge badge-info">📌 {{ memory.daysInfo?.label }}</span>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Image skeleton -->
-        <div class="w-full h-48 bg-gradient-to-br from-gray-200 to-gray-300"></div>
+        <div style="width: 100%; height: 12rem; background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--border) 37%, var(--bg-secondary) 63%); background-size: 200% 100%; animation: loading 1.5s infinite; border-radius: var(--radius-lg); margin-bottom: 1rem; box-sizing: border-box; overflow: hidden;"></div>
 
         <!-- Content skeleton -->
-        <div class="px-5 py-4 space-y-3">
-          <div class="space-y-2">
-            <div class="h-4 bg-gray-200 rounded-full"></div>
-            <div class="h-4 bg-gray-200 rounded-full w-5/6"></div>
-            <div class="h-4 bg-gray-200 rounded-full w-4/6"></div>
-          </div>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem; width: 100%; box-sizing: border-box; overflow: hidden;">
+          <div style="height: 1rem; background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--border) 37%, var(--bg-secondary) 63%); background-size: 200% 100%; animation: loading 1.5s infinite; border-radius: var(--radius-md); width: 100%;"></div>
+          <div style="height: 1rem; background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--border) 37%, var(--bg-secondary) 63%); background-size: 200% 100%; animation: loading 1.5s infinite; border-radius: var(--radius-md); width: 85%;"></div>
+          <div style="height: 1rem; background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--border) 37%, var(--bg-secondary) 63%); background-size: 200% 100%; animation: loading 1.5s infinite; border-radius: var(--radius-md); width: 70%;"></div>
         </div>
       </div>
     </div>

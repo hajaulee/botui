@@ -21,7 +21,7 @@ export default {
   },
 
   template: /* html */`
-    <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div style="min-height: 100vh; background-color: #f8fafc;">
       <!-- Loading Overlay (Delete) -->
       <div v-if="isDeleting" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white rounded-lg shadow-2xl p-8 text-center">
@@ -49,16 +49,16 @@ export default {
       </div>
 
       <!-- Header -->
-      <header class="bg-white shadow">
-        <div class="max-w-4xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <h1 class="text-2xl sm:text-3xl font-bold text-indigo-600">🤖 Chatbot Utils</h1>
-          <p class="text-gray-600 text-sm">Công cụ hỗ trợ quản lý chatbot</p>
-          <p class="text-indigo-500 font-semibold mt-2">👋 Xin chào, {{ username }}!</p>
+      <header style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); box-shadow: 0 10px 25px rgba(99, 102, 241, 0.2);">
+        <div style="max-width: 1400px; margin: 0 auto; padding: 2rem 1.5rem; color: white;">
+          <h1 style="font-size: 2.25rem; font-weight: 900; margin-bottom: 0.5rem; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">🤖 Chatbot Utils</h1>
+          <p style="font-size: 1.125rem; opacity: 0.95; margin-bottom: 1rem;">Công cụ hỗ trợ quản lý chatbot</p>
+          <p style="font-size: 1rem; font-weight: 600; opacity: 0.9;">👋 Xin chào, {{ username }}!</p>
         </div>
       </header>
 
       <!-- Main Content -->
-      <main class="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <main style="max-width: 1400px; margin: 0 auto; padding: 2rem 1.5rem;">
         <!-- Menu Page -->
         <MenuPage 
           v-if="currentPage === 'menu'"

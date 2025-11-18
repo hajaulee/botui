@@ -18,119 +18,97 @@ export default {
   emits: ['navigate'],
 
   template: /* html */`
-    <div class="space-y-6">
-      <!-- Back Button -->
-      <button
-        @click="$emit('navigate', 'menu')"
-        class="text-gray-600 hover:text-gray-800 font-semibold mb-2 flex items-center gap-2 transition hover:gap-3"
-      >
+    <div class="page-container">
+      <button @click="$emit('navigate', 'menu')" class="btn-back">
         ← Quay lại menu
       </button>
 
       <!-- Header with Gradient -->
-      <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-600 via-pink-500 to-blue-500 p-8 text-white shadow-2xl">
-        <div class="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-20 -mt-20 blur-2xl"></div>
-        <div class="absolute bottom-0 left-0 w-40 h-40 bg-white/10 rounded-full -ml-20 -mb-20 blur-2xl"></div>
-        
-        <div class="relative z-10">
-          <h1 class="text-5xl font-black mb-2 drop-shadow-lg">🎉 Kỷ niệm</h1>
-          <p class="text-lg text-white/90 font-medium">Lưu trữ và quản lý những kỷ niệm đặc biệt của bạn</p>
+      <div class="hero-header" style="background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);">
+        <div class="hero-header-content">
+          <h1>🎉 Kỷ niệm</h1>
+          <p>Lưu trữ và quản lý những kỷ niệm đặc biệt của bạn</p>
         </div>
       </div>
 
       <!-- Search and Add Button -->
-      <div class="relative">
-        <!-- Animated Background Gradient -->
-        <div class="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-purple-400/20 to-pink-400/20 rounded-2xl blur-xl"></div>
-        
-        <div class="relative bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-white/50 space-y-4">
-          <div class="flex flex-col sm:flex-row gap-3">
-            <!-- Search Input -->
-            <div class="flex-1 relative group">
-              <div class="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl blur opacity-0 group-hover:opacity-30 transition duration-300"></div>
-              <input
-                v-model="searchQuery"
-                @keyup.enter="searchMemories"
-                type="text"
-                placeholder="🔍 Tìm kiếm kỷ niệm..."
-                class="relative w-full px-5 py-3 pl-5 border-2 border-gray-200 hover:border-purple-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition duration-300 bg-white/50 hover:bg-white"
-              />
-            </div>
-
-            <!-- Search Button -->
-            <button
-              @click="searchMemories"
-              :disabled="isLoading"
-              class="group relative px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-bold transition disabled:opacity-50 shadow-lg hover:shadow-2xl overflow-hidden"
-            >
-              <div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition duration-300"></div>
-              <span class="relative flex items-center justify-center gap-2">
-                <span class="text-lg">🔍</span> Tìm
-              </span>
-            </button>
-
-            <!-- Add Button -->
-            <button
-              @click="openAddModal"
-              :disabled="isLoading"
-              class="group relative px-8 py-3 bg-gradient-to-r from-green-500 via-emerald-500 to-emerald-600 hover:from-green-600 hover:via-emerald-600 hover:to-emerald-700 text-white rounded-xl font-bold transition disabled:opacity-50 shadow-lg hover:shadow-2xl overflow-hidden"
-            >
-              <div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition duration-300"></div>
-              <span class="relative flex items-center justify-center gap-2">
-                <span class="text-lg group-hover:scale-125 transition duration-300">✨</span> Thêm
-              </span>
-            </button>
+      <div class="card" style="margin-top: 1.5rem;">
+        <div class="flex flex-col sm:flex-row gap-3">
+          <!-- Search Input -->
+          <div class="flex-1">
+            <input
+              v-model="searchQuery"
+              @keyup.enter="searchMemories"
+              type="text"
+              placeholder="🔍 Tìm kiếm kỷ niệm..."
+              class="w-full"
+            />
           </div>
 
-          <!-- Results Info -->
-          <div v-if="displayedMemories.length > 0" class="pt-2 border-t border-gray-200/50">
-            <p class="text-sm text-gray-600 font-medium">
-              <span class="inline-block px-3 py-1 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full">
-                📌 Đang hiển thị <span class="font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{{ displayedMemories.length }}</span> kỷ niệm
-                <span v-if="searchQuery">
-                  • Tìm: <span class="font-semibold text-gray-800">"{{ searchQuery }}"</span>
-                </span>
+          <!-- Search Button -->
+          <button
+            @click="searchMemories"
+            :disabled="isLoading"
+            class="btn btn-info"
+          >
+            🔍 Tìm
+          </button>
+
+          <!-- Add Button -->
+          <button
+            @click="openAddModal"
+            :disabled="isLoading"
+            class="btn btn-success"
+          >
+            ✨ Thêm
+          </button>
+        </div>
+
+        <!-- Results Info -->
+        <div v-if="displayedMemories.length > 0" class="mt-4 pt-4" style="border-top: 1px solid var(--border);">
+          <p class="text-sm font-medium">
+            <span class="badge badge-primary">
+              📌 Đang hiển thị <strong>{{ displayedMemories.length }}</strong> kỷ niệm
+              <span v-if="searchQuery">
+                • Tìm: <strong>"{{ searchQuery }}"</strong>
               </span>
-            </p>
-          </div>
+            </span>
+          </p>
         </div>
       </div>
 
       <!-- Alert Messages -->
-      <div v-if="errorMessage" class="bg-gradient-to-r from-red-50 to-red-100/50 border-l-4 border-red-500 rounded-xl p-4 text-red-700 font-medium shadow-md animate-in slide-in-from-top">
-        ⚠️ {{ errorMessage }}
+      <div v-if="errorMessage" class="alert alert-error">
+        <div class="alert-icon">⚠️</div>
+        <div class="alert-content">{{ errorMessage }}</div>
       </div>
 
-      <div v-if="successMessage" class="bg-gradient-to-r from-green-50 to-green-100/50 border-l-4 border-green-500 rounded-xl p-4 text-green-700 font-medium shadow-md animate-in slide-in-from-top">
-        ✅ {{ successMessage }}
+      <div v-if="successMessage" class="alert alert-success">
+        <div class="alert-icon">✅</div>
+        <div class="alert-content">{{ successMessage }}</div>
       </div>
 
       <!-- Loading State -->
       <div v-if="isLoading && displayedMemories.length === 0" class="text-center py-16">
-        <div class="inline-block mb-6">
-          <div class="relative w-16 h-16">
-            <div class="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full animate-spin" style="background-image: conic-gradient(from 0deg, #a855f7 0deg, #a855f7 90deg, transparent 90deg); animation: spin 2s linear infinite;"></div>
-            <div class="absolute inset-2 bg-white rounded-full"></div>
-          </div>
-        </div>
-        <p class="text-gray-600 font-semibold text-lg">⏳ Đang tải kỷ niệm...</p>
+        <div style="font-size: 3rem; margin-bottom: 1rem; animation: spin 2s linear infinite;">⏳</div>
+        <p class="text-secondary font-semibold">Đang tải kỷ niệm...</p>
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="displayedMemories.length === 0 && !isLoading" class="bg-gradient-to-br from-white to-gray-50 rounded-3xl shadow-lg p-16 text-center border-2 border-gray-100">
-        <div class="text-8xl mb-6 animate-bounce">📝</div>
-        <h2 class="text-3xl font-black bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-3">Chưa có kỷ niệm nào</h2>
-        <p class="text-gray-600 mb-8 font-medium text-lg">Hãy thêm kỷ niệm đầu tiên để bắt đầu hành trình lưu giữ khoảnh khắc đặc biệt!</p>
+      <div v-else-if="displayedMemories.length === 0 && !isLoading" class="card text-center p-8">
+        <div style="font-size: 4rem; margin-bottom: 1rem; animation: bounce 1s infinite;">📝</div>
+        <h2 class="text-2xl font-bold mb-3">Chưa có kỷ niệm nào</h2>
+        <p class="text-secondary mb-6">Hãy thêm kỷ niệm đầu tiên để bắt đầu hành trình lưu giữ khoảnh khắc đặc biệt!</p>
         <button
           @click="openAddModal"
-          class="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-bold transition shadow-lg hover:shadow-xl inline-block"
+          class="btn btn-success"
         >
           ➕ Thêm kỷ niệm mới
         </button>
       </div>
 
       <!-- Memory Cards Grid -->
-      <div v-if="displayedMemories.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" ref="cardContainer">
+      <div v-if="displayedMemories.length > 0" class="card-grid" ref="cardContainer">
         <!-- Memory Card or Skeleton -->
         <template v-for="memory in displayedMemories" :key="memory.id">
           <!-- Show skeleton while loading detail -->
@@ -148,8 +126,8 @@ export default {
       </div>
 
       <!-- Load More Sentinel (for infinite scroll) -->
-      <div v-if="hasMore() && displayedMemories.length > 0" class="py-12 flex justify-center" ref="loadMoreSentinel">
-        <div class="text-gray-600 font-semibold">⏳ {{ isLoadingMore ? 'Đang tải thêm...' : 'Scroll để tải thêm' }}</div>
+      <div v-if="hasMore() && displayedMemories.length > 0" class="flex justify-center p-8" ref="loadMoreSentinel">
+        <div class="text-secondary font-semibold">⏳ {{ isLoadingMore ? 'Đang tải thêm...' : 'Scroll để tải thêm' }}</div>
       </div>
 
       <!-- Add/Edit Memory Modal -->
