@@ -2,6 +2,8 @@
  * API Service - Xử lý tất cả các API calls
  */
 
+import { indexedDBService } from './indexedDbService.js';
+
 export class APIService {
 
     memoryAllowedKeys = ['id', 'title', 'text', 'eventDate', 'imageBase64', 'isDeleted', 'createdAt', 'updatedAt'];
@@ -183,8 +185,7 @@ export class APIService {
      */
     async getCachedMemoryDetail(memoryId, basicInfoUpdatedAt) {
         try {
-            const { memoriesService } = await import('./memoriesService.js');
-            const cached = await memoriesService.getMemoryById(memoryId);
+            const cached = await indexedDBService.getMemoryById(memoryId);
             
             // Nếu không có cache, return null
             if (!cached) {
@@ -220,19 +221,9 @@ export class APIService {
      * @returns {Promise<void>}
      */
     async cacheMemoryDetail(memoryData) {
-        try {
-            const { memoriesService } = await import('./memoriesService.js');
-                        
-            // Kiểm tra xem đã tồn tại chưa
-            const existing = await memoriesService.getMemoryById(memoryData.id);
-            
-            if (existing) {
-                // Update cache
-                await memoriesService.updateMemory(memoryData.id, memoryData);
-            } else {
-                // Tạo cache mới
-                await memoriesService.createMemory(memoryData);
-            }
+        try {                        
+
+            await indexedDBService.saveMemory(memoryData);
         } catch (error) {
             console.warn('⚠️ Warning: Failed to cache memory:', error);
             // Không throw error, vẫn tiếp tục dù cache fail
