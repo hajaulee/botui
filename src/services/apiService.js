@@ -117,7 +117,10 @@ export class APIService {
      * @returns {Promise<Array>} List memories với {id, eventDate, title}
      */
     async getMemoriesList() {
-        const apiUrl = `https://script.google.com/macros/s/${this.apiId}/exec?target=memory&action=list`;
+        // const apiUrl = `https://script.google.com/macros/s/${this.apiId}/exec?target=memory&action=list`;
+        
+        // Faster alternative API
+        const apiUrl = "https://cccccccc-c06da.firebaseio.com/botui/target=memory@action=list.json"
         const response = await fetch(apiUrl);
 
         if (!response.ok) {
