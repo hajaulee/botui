@@ -178,7 +178,9 @@ export function useMemories(apiId) {
       // Filter local
       const query = searchQuery.value.toLowerCase();
       const filtered = memoriesBasicAll.value.filter(m =>
-        m.title?.toLowerCase()?.includes(query)
+        m.eventDate?.toLowerCase()?.includes(query) ||
+        m.title?.toLowerCase()?.includes(query) ||
+        (memoriesDetail.value[m.id]?.text?.toLowerCase()?.includes(query))
       );
 
       memoriesBasic.value = filtered;
