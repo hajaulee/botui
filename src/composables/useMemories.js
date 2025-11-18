@@ -70,6 +70,7 @@ export function useMemories(apiId) {
 
   /**
    * Lazy load chi tiết memory (gọi khi scroll đến hoặc click expand)
+   * Kiểm tra cache IndexedDB trước, nếu cũ hơn basic info thì gọi API
    * @param {number|string} memoryId
    */
   const lazyLoadMemory = async (memoryId) => {
@@ -86,7 +87,12 @@ export function useMemories(apiId) {
     loadingMemoryIds.value.add(memoryId);
 
     try {
-      const detail = await apiService.loadMemory(memoryId);
+      // Lấy basicInfo mới nhất để check updatedAt
+      const basicInfo = memoriesBasic.value.find(m => m.id === memoryId);
+      const basicInfoUpdatedAt = basicInfo?.updatedAt || null;
+
+      // loadMemory sẽ check cache IndexedDB trước
+      const detail = await apiService.loadMemory(memoryId, basicInfoUpdatedAt);
       
       if (detail) {
         // Add date info

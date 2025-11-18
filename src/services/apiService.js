@@ -121,7 +121,7 @@ export class APIService {
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        // Response: { id, eventDate, title } // Just basic info
+        // Response: { id, eventDate, title, updatedAt } // Just basic info
         const data = await response.json();
         // Sort theo eventDate giảm dần
         let memories = Array.isArray(data) ? data : data.data || [];
@@ -134,12 +134,23 @@ export class APIService {
     }
 
     /**
-     * Lấy chi tiết memory (lazy loading)
-     * GET target=memory&action=load&postId={id}
+     * Lấy chi tiết memory (lazy loading) với cache logic
+     * - Kiểm tra cache IndexedDB trước
+     * - Nếu cache cũ hơn (updatedAt), gọi API lấy mới
+     * - Nếu cache mới, dùng cache
      * @param {number|string} memoryId - ID của memory
+     * @param {string} basicInfoUpdatedAt - updatedAt từ basic info mới nhất
      * @returns {Promise<Object|null>} Memory object hoặc null nếu bị delete
      */
-    async loadMemory(memoryId) {
+    async loadMemory(memoryId, basicInfoUpdatedAt = null) {
+
+        // Cố lấy từ cache IndexedDB trước
+        const cached = await this.getCachedMemoryDetail(memoryId, basicInfoUpdatedAt);
+        if (cached) {            
+            return cached;
+        }
+
+        // Nếu không có cache hợp lệ, gọi API
         const apiUrl = `https://script.google.com/macros/s/${this.apiId}/exec?target=memory&action=load&postId=${memoryId}`;
         const response = await fetch(apiUrl);
 
@@ -154,7 +165,76 @@ export class APIService {
             Object.entries(memory).filter(([key]) => this.memoryAllowedKeys.includes(key))
         );
 
+        // Cache vào IndexedDB
+        if (memory && !memory.isDeleted) {
+            await this.cacheMemoryDetail(memory);
+        }
+
         return memory;
+    }
+
+    /**
+     * Lấy memory detail từ cache IndexedDB
+     * @param {number|string} memoryId - ID của memory
+     * @param {string} basicInfoUpdatedAt - updatedAt từ basic info mới nhất
+     * @returns {Promise<Object|null>} Cached memory nếu mới, null nếu cũ hoặc không tồn tại
+     */
+    async getCachedMemoryDetail(memoryId, basicInfoUpdatedAt) {
+        try {
+            const { memoriesService } = await import('./memoriesService.js');
+            const cached = await memoriesService.getMemoryById(memoryId);
+            
+            // Nếu không có cache, return null
+            if (!cached) {
+                return null;
+            }
+
+            // Nếu cache bị delete, return null
+            if (cached.isDeleted) {
+                return null;
+            }
+
+            // Nếu basicInfoUpdatedAt không tồn tại, luôn dùng cache
+            if (!basicInfoUpdatedAt) {
+                return cached;
+            }
+
+            // Nếu basicInfoUpdatedAt mới hơn cache, return null (cần fetch lại)
+            if (new Date(basicInfoUpdatedAt) > new Date(cached.updatedAt)) {
+                return null;
+            }
+
+            // Cache vẫn mới, dùng cache
+            return cached;
+        } catch (error) {
+            console.warn('❌ Error getting cached memory:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Cache memory detail vào IndexedDB
+     * @param {Object} memoryData - Memory object
+     * @returns {Promise<void>}
+     */
+    async cacheMemoryDetail(memoryData) {
+        try {
+            const { memoriesService } = await import('./memoriesService.js');
+                        
+            // Kiểm tra xem đã tồn tại chưa
+            const existing = await memoriesService.getMemoryById(memoryData.id);
+            
+            if (existing) {
+                // Update cache
+                await memoriesService.updateMemory(memoryData.id, memoryData);
+            } else {
+                // Tạo cache mới
+                await memoriesService.createMemory(memoryData);
+            }
+        } catch (error) {
+            console.warn('⚠️ Warning: Failed to cache memory:', error);
+            // Không throw error, vẫn tiếp tục dù cache fail
+        }
     }
 
     /**

@@ -70,7 +70,7 @@ class MemoriesService {
     
     const memory = {
       ...memoryData,
-      id: Date.now(), // Dùng timestamp làm ID
+      id: memoryData?.id ?? Date.now(), // Dùng timestamp làm ID
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -119,16 +119,19 @@ class MemoriesService {
 
   /**
    * Lấy kỷ niệm theo ID
-   * @param {number} id - Memory ID
+   * @param {number|string} id - Memory ID
    * @returns {Promise<Object|null>}
    */
   async getMemoryById(id) {
     await this.ensureDB();
 
+    // Convert id thành number để match keyPath
+    const numId = typeof id === 'string' ? parseInt(id, 10) : id;
+
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction([STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
-      const request = store.get(id);
+      const request = store.get(numId);
 
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result || null);
@@ -137,16 +140,19 @@ class MemoriesService {
 
   /**
    * Xóa kỷ niệm
-   * @param {number} id - Memory ID
+   * @param {number|string} id - Memory ID
    * @returns {Promise<void>}
    */
   async deleteMemory(id) {
     await this.ensureDB();
 
+    // Convert id thành number để match keyPath
+    const numId = typeof id === 'string' ? parseInt(id, 10) : id;
+
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
-      const request = store.delete(id);
+      const request = store.delete(numId);
 
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve();
