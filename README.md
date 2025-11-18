@@ -1,5 +1,7 @@
 # Chatbot Utils - Công cụ hỗ trợ chatbot
 
+> 📖 **Contributing?** Please read [CONTRIBUTION_GUIDELINES.md](./CONTRIBUTION_GUIDELINES.md) before making changes!
+
 ## 📱 Mô tả ứng dụng
 
 **Chatbot Utils** là một ứng dụng web Progressive Web App (PWA) xây dựng bằng **Vue 3** (Composition API, không có build process) và **Tailwind CSS CDN**. Ứng dụng giúp quản lý các tiện ích cho chatbot với các tính năng như nhắc nhở, quản lý cây gia phả, và sự kiện âm lịch.
