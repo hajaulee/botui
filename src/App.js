@@ -7,6 +7,7 @@ import MenuPage from './pages/MenuPage.js';
 import ReminderPage from './pages/ReminderPage.js';
 import FamilyPage from './pages/FamilyPage.js';
 import LunarEventsPage from './pages/LunarEventsPage.js';
+import MemoriesPage from './pages/MemoriesPage.js';
 import AboutPage from './pages/AboutPage.js';
 
 export default {
@@ -15,6 +16,7 @@ export default {
     ReminderPage,
     FamilyPage,
     LunarEventsPage,
+    MemoriesPage,
     AboutPage
   },
 
@@ -84,6 +86,12 @@ export default {
         <LunarEventsPage 
           v-else-if="currentPage === 'lunarEvents'"
           :api-id="apiId"
+          @navigate="goToPage"
+        />
+
+        <!-- Memories Page -->
+        <MemoriesPage 
+          v-else-if="currentPage === 'memories'"
           @navigate="goToPage"
         />
 

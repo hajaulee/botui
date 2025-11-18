@@ -46,6 +46,16 @@ export default {
             <p class="text-sm text-orange-100 mt-2">Quản lý sự kiện âm lịch quan trọng</p>
           </button>
 
+          <!-- Memories Button -->
+          <button 
+            @click="$emit('navigate', 'memories')"
+            class="p-6 bg-gradient-to-br from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white rounded-lg shadow-md transition transform hover:scale-105 active:scale-95"
+          >
+            <div class="text-4xl mb-3">🎉</div>
+            <h3 class="text-xl font-bold">Kỷ niệm</h3>
+            <p class="text-sm text-pink-100 mt-2">Lưu trữ những kỷ niệm đặc biệt</p>
+          </button>
+
           <!-- About Button -->
           <button 
             @click="$emit('navigate', 'about')"
