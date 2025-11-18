@@ -83,10 +83,10 @@ export default {
           </div>
 
           <!-- Results Info -->
-          <div v-if="filteredMemories.length > 0" class="pt-2 border-t border-gray-200/50">
+          <div v-if="displayedMemories.length > 0" class="pt-2 border-t border-gray-200/50">
             <p class="text-sm text-gray-600 font-medium">
               <span class="inline-block px-3 py-1 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full">
-                📌 Đang hiển thị <span class="font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{{ filteredMemories.length }}</span> kỷ niệm
+                📌 Đang hiển thị <span class="font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{{ displayedMemories.length }}</span> kỷ niệm
                 <span v-if="searchQuery">
                   • Tìm: <span class="font-semibold text-gray-800">"{{ searchQuery }}"</span>
                 </span>
@@ -106,7 +106,7 @@ export default {
       </div>
 
       <!-- Loading State -->
-      <div v-if="isLoading && filteredMemories.length === 0" class="text-center py-16">
+      <div v-if="isLoading && displayedMemories.length === 0" class="text-center py-16">
         <div class="inline-block mb-6">
           <div class="relative w-16 h-16">
             <div class="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full animate-spin" style="background-image: conic-gradient(from 0deg, #a855f7 0deg, #a855f7 90deg, transparent 90deg); animation: spin 2s linear infinite;"></div>
@@ -117,7 +117,7 @@ export default {
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="filteredMemories.length === 0 && !isLoading" class="bg-gradient-to-br from-white to-gray-50 rounded-3xl shadow-lg p-16 text-center border-2 border-gray-100">
+      <div v-else-if="displayedMemories.length === 0 && !isLoading" class="bg-gradient-to-br from-white to-gray-50 rounded-3xl shadow-lg p-16 text-center border-2 border-gray-100">
         <div class="text-8xl mb-6 animate-bounce">📝</div>
         <h2 class="text-3xl font-black bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-3">Chưa có kỷ niệm nào</h2>
         <p class="text-gray-600 mb-8 font-medium text-lg">Hãy thêm kỷ niệm đầu tiên để bắt đầu hành trình lưu giữ khoảnh khắc đặc biệt!</p>
@@ -130,9 +130,9 @@ export default {
       </div>
 
       <!-- Memory Cards Grid -->
-      <div v-if="filteredMemories.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" ref="cardContainer">
+      <div v-if="displayedMemories.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" ref="cardContainer">
         <!-- Memory Card or Skeleton -->
-        <template v-for="memory in filteredMemories" :key="memory.id">
+        <template v-for="memory in displayedMemories" :key="memory.id">
           <!-- Show skeleton while loading detail -->
           <SkeletonMemoryCard v-if="isMemoryLoading(memory.id)" :memory="memory" />
           
@@ -147,15 +147,9 @@ export default {
         </template>
       </div>
 
-      <!-- Load More Button (Infinite Scroll) -->
-      <div v-if="hasMore() && filteredMemories.length > 0" class="text-center py-12">
-        <button
-          @click="loadMore"
-          :disabled="isLoadingMore"
-          class="px-10 py-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-xl font-bold transition disabled:opacity-50 shadow-lg hover:shadow-xl"
-        >
-          {{ isLoadingMore ? '⏳ Đang tải...' : '📥 Xem thêm kỷ niệm' }}
-        </button>
+      <!-- Load More Sentinel (for infinite scroll) -->
+      <div v-if="hasMore() && displayedMemories.length > 0" class="py-12 flex justify-center" ref="loadMoreSentinel">
+        <div class="text-gray-600 font-semibold">⏳ {{ isLoadingMore ? 'Đang tải thêm...' : 'Scroll để tải thêm' }}</div>
       </div>
 
       <!-- Add/Edit Memory Modal -->
@@ -184,14 +178,48 @@ export default {
   setup(props) {
     const composable = useMemories(props.apiId);
 
-    // Load memories list on mount
-    const { onMounted } = Vue;
+    // Load memories list on mount + setup infinite scroll
+    const { onMounted, ref } = Vue;
+    let observer = null;
+    const loadMoreSentinel = ref(null);
     
     onMounted(async () => {
       await composable.loadMemoriesList();
+      setupInfiniteScroll();
     });
 
-    return composable;
+    const setupInfiniteScroll = () => {
+      if (observer) {
+        observer.disconnect();
+      }
+
+      // Dùng ref template thay vì querySelector
+      if (!loadMoreSentinel.value) {
+        console.warn('⚠️ Load more sentinel element not found');
+        return;
+      }
+
+      observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting && composable.hasMore() && !composable.isLoadingMore.value) {
+              composable.addMoreItems();
+            }
+          });
+        },
+        {
+          rootMargin: '100px',
+          threshold: 0.1
+        }
+      );
+
+      observer.observe(loadMoreSentinel.value);
+    };
+
+    return {
+      ...composable,
+      loadMoreSentinel
+    };
   }
 
 };

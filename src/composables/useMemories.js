@@ -21,19 +21,18 @@ export function useMemories(apiId) {
 
   // State
   const memoriesBasic = ref([]); // Basic list từ API (id, title, eventDate)
-  const memoriesBasicAll = ref([]); // Full basic list từ API (id, title, eventDate)
   const memoriesDetail = ref({}); // Detail cache: { [id]: fullMemoryObject }
   const loadingMemoryIds = ref(new Set()); // IDs đang load
-  const filteredMemories = ref([]); // Final list để display
+  const displayedMemories = ref([]); // Memories đang hiển thị (infinite scroll)
   const searchQuery = ref('');
   const isLoading = ref(false);
   const isLoadingMore = ref(false);
   const errorMessage = ref('');
   const successMessage = ref('');
 
-  // Pagination state
-  const pageSize = 10;
-  const currentPage = ref(0);
+  // Infinite scroll state
+  const itemsPerLoad = 10; // Load 10 items mỗi lần
+  const itemsLoaded = ref(0); // Số items đã add vào displayedMemories
 
   // Form state
   const showAddModal = ref(false);
@@ -47,6 +46,7 @@ export function useMemories(apiId) {
 
   /**
    * Tải danh sách basic memories từ API
+   * Infinite scroll: Load 10 items đầu tiên
    */
   const loadMemoriesList = async () => {
     isLoading.value = true;
@@ -54,12 +54,22 @@ export function useMemories(apiId) {
 
     try {
       const list = await apiService.getMemoriesList();
-      memoriesBasicAll.value = list;
       memoriesBasic.value = list;
-      loadingMemoryIds.value.clear();
-      currentPage.value = 0;
       
-      await filterAndPaginate();
+      // Giữ lại cache detail của những memory vẫn tồn tại
+      const existingIds = new Set(list.map(m => m.id));
+      for (const id in memoriesDetail.value) {
+        if (!existingIds.has(parseInt(id))) {
+          delete memoriesDetail.value[id];
+        }
+      }
+      
+      loadingMemoryIds.value.clear();
+      itemsLoaded.value = 0;
+      displayedMemories.value = [];
+      
+      // Load 10 items đầu tiên
+      await addMoreItems();
     } catch (error) {
       console.error('❌ Error loading memories list:', error);
       errorMessage.value = error.message || 'Lỗi khi tải danh sách kỷ niệm';
@@ -102,8 +112,11 @@ export function useMemories(apiId) {
         // Cache detail
         memoriesDetail.value[memoryId] = detail;
         
-        // Update filtered memories để hiển thị detail mới
-        await filterAndPaginate();
+        // Update displayedMemories để hiển thị detail mới
+        const idx = displayedMemories.value.findIndex(m => m.id === memoryId);
+        if (idx !== -1) {
+          displayedMemories.value[idx] = { ...displayedMemories.value[idx], ...detail };
+        }
       }
 
       return detail;
@@ -116,52 +129,43 @@ export function useMemories(apiId) {
   };
 
   /**
-   * Lọc và phân trang
+   * Thêm 10 items tiếp theo (infinite scroll)
    */
-  const filterAndPaginate = async () => {
-    const start = currentPage.value * pageSize;
-    const end = start + pageSize;
-    
-    const paginated = memoriesBasic.value
-      .filter(m => !memoriesDetail.value[m.id]?.isDeleted)
-      .slice(start, end);
-
-    // Map basic info với detail (nếu có) hoặc placeholder
-    const displayMemories = paginated.map(basic => {
-      const detail = memoriesDetail.value[basic.id];
-
-      const dateInfo = detail?.dateInfo ?? memoriesService.calculateDaysRemaining(basic.eventDate);
-      return {
-        ...basic,
-        daysInfo: dateInfo,
-        text: '',
-        imageBase64: '',
-        ...detail,
-        isLoading: loadingMemoryIds.value.has(basic.id)
-      };
-    });
-
-    filteredMemories.value = displayMemories;
-  };
-
-  /**
-   * Load thêm memories (infinite scroll)
-   */
-  const loadMore = async () => {
-    const nextPage = currentPage.value + 1;
-    const start = nextPage * pageSize;
+  const addMoreItems = async () => {    
+    const start = itemsLoaded.value;
+    const end = start + itemsPerLoad;
 
     if (start >= memoriesBasic.value.length) {
-      return;
+      return; // Không có items nữa
     }
 
     isLoadingMore.value = true;
 
     try {
-      currentPage.value = nextPage;
-      await filterAndPaginate();
+      // Lấy 10 items tiếp theo từ basic list
+      const newItems = memoriesBasic.value
+        .filter(m => !memoriesDetail.value[m.id]?.isDeleted)
+        .slice(start, end);
+
+      // Map basic info thành display object (với skeleton chưa có detail)
+      const itemsToAdd = newItems.map(basic => {
+        const detail = memoriesDetail.value[basic.id];
+        const dateInfo = detail?.dateInfo ?? memoriesService.calculateDaysRemaining(basic.eventDate);
+        
+        return {
+          ...basic,
+          daysInfo: dateInfo,
+          text: detail?.text || '',
+          imageBase64: detail?.imageBase64 || '',
+          ...detail
+        };
+      });
+
+      // Add vào displayedMemories
+      displayedMemories.value.push(...itemsToAdd);
+      itemsLoaded.value = end;
     } catch (error) {
-      console.error('❌ Error loading more:', error);
+      console.error('❌ Error adding more items:', error);
       errorMessage.value = 'Lỗi khi tải thêm kỷ niệm';
     } finally {
       isLoadingMore.value = false;
@@ -183,15 +187,23 @@ export function useMemories(apiId) {
 
       // Filter local
       const query = searchQuery.value.toLowerCase();
-      const filtered = memoriesBasicAll.value.filter(m =>
+      const filtered = memoriesBasic.value.filter(m =>
         m.eventDate?.toLowerCase()?.includes(query) ||
         m.title?.toLowerCase()?.includes(query) ||
         (memoriesDetail.value[m.id]?.text?.toLowerCase()?.includes(query))
       );
 
+      // Reset infinite scroll
+      displayedMemories.value = [];
+      itemsLoaded.value = 0;
+      
+      // Tạm set memoriesBasic để filter rồi load 10 items
+      const tempBasic = memoriesBasic.value;
       memoriesBasic.value = filtered;
-      currentPage.value = 0;
-      await filterAndPaginate();
+      await addMoreItems();
+      
+      // Restore nếu cần (search mode)
+      memoriesBasic.value = filtered;
     } catch (error) {
       console.error('❌ Error searching:', error);
       errorMessage.value = 'Lỗi khi tìm kiếm';
@@ -349,11 +361,10 @@ export function useMemories(apiId) {
   };
 
   /**
-   * Kiểm tra còn memory để load không
+   * Kiểm tra còn memory để load không (infinite scroll)
    */
   const hasMore = () => {
-    const totalLoaded = (currentPage.value + 1) * pageSize;
-    return totalLoaded < memoriesBasic.value.length;
+    return itemsLoaded.value < memoriesBasic.value.length;
   };
 
   /**
@@ -374,7 +385,7 @@ export function useMemories(apiId) {
     // State
     memoriesBasic,
     memoriesDetail,
-    filteredMemories,
+    displayedMemories,
     searchQuery,
     isLoading,
     isLoadingMore,
@@ -387,8 +398,7 @@ export function useMemories(apiId) {
     // Methods
     loadMemoriesList,
     lazyLoadMemory,
-    filterAndPaginate,
-    loadMore,
+    addMoreItems,
     searchMemories,
     openAddModal,
     openEditModal,
