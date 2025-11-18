@@ -282,17 +282,67 @@ class MemoriesService {
   }
 
   /**
-   * Chuyển đổi file thành base64
+   * Resize ảnh (keep ratio, max 800px các chiều)
    * @param {File} file - File object
-   * @returns {Promise<string>}
+   * @param {number} maxWidth - Max width (default 800)
+   * @param {number} maxHeight - Max height (default 800)
+   * @param {number} quality - Compression quality 0-1 (default 0.7 = 70%)
+   * @returns {Promise<string>} Base64 JPG image
    */
-  async fileToBase64(file) {
+  async resizeAndCompressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.7) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
+      
+      reader.onload = (event) => {
+        const img = new Image();
+        
+        img.onload = () => {
+          // Tính toán kích thước mới (keep ratio)
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > height) {
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+          
+          // Tạo canvas
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          
+          // Draw image lên canvas
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Convert thành JPG base64 với quality
+          const base64 = canvas.toDataURL('image/jpeg', quality);
+          resolve(base64);
+        };
+        
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = event.target.result;
+      };
+      
+      reader.onerror = () => reject(new Error('Failed to read file'));
       reader.readAsDataURL(file);
     });
+  }
+
+  /**
+   * Chuyển đổi file thành base64 (với resize/compress)
+   * @param {File} file - File object
+   * @returns {Promise<string>} Base64 JPG image (resize max 800px, quality 70%)
+   */
+  async fileToBase64(file) {
+    return this.resizeAndCompressImage(file, 800, 800, 0.7);
   }
 
   /**
