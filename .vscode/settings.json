@@ -1,0 +1,7 @@
+{
+    "github.copilot.chat.commitMessageGeneration.instructions": [
+        {
+            "text": "Write in Vietnamese, shorter 60 characters.",
+        }
+    ]
+}
