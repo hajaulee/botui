@@ -21,6 +21,7 @@ export function useMemories(apiId) {
 
   // State
   const memoriesBasic = ref([]); // Basic list từ API (id, title, eventDate)
+  const memoriesBasicAll = ref([]); // Full basic list từ API (id, title, eventDate)
   const memoriesDetail = ref({}); // Detail cache: { [id]: fullMemoryObject }
   const loadingMemoryIds = ref(new Set()); // IDs đang load
   const filteredMemories = ref([]); // Final list để display
@@ -53,8 +54,8 @@ export function useMemories(apiId) {
 
     try {
       const list = await apiService.getMemoriesList();
+      memoriesBasicAll.value = list;
       memoriesBasic.value = list;
-      memoriesDetail.value = {};
       loadingMemoryIds.value.clear();
       currentPage.value = 0;
       
@@ -115,23 +116,21 @@ export function useMemories(apiId) {
     const start = currentPage.value * pageSize;
     const end = start + pageSize;
     
-    const paginated = memoriesBasic.value.slice(start, end);
-    
+    const paginated = memoriesBasic.value
+      .filter(m => !memoriesDetail.value[m.id]?.isDeleted)
+      .slice(start, end);
+
     // Map basic info với detail (nếu có) hoặc placeholder
     const displayMemories = paginated.map(basic => {
       const detail = memoriesDetail.value[basic.id];
-      
-      if (detail) {
-        return detail;
-      }
 
-      // Thêm basic info + placeholder
-      const dateInfo = memoriesService.calculateDaysRemaining(basic.eventDate);
+      const dateInfo = detail?.dateInfo ?? memoriesService.calculateDaysRemaining(basic.eventDate);
       return {
         ...basic,
         daysInfo: dateInfo,
         text: '',
         imageBase64: '',
+        ...detail,
         isLoading: loadingMemoryIds.value.has(basic.id)
       };
     });
@@ -178,8 +177,8 @@ export function useMemories(apiId) {
 
       // Filter local
       const query = searchQuery.value.toLowerCase();
-      const filtered = memoriesBasic.value.filter(m =>
-        m.title.toLowerCase().includes(query)
+      const filtered = memoriesBasicAll.value.filter(m =>
+        m.title?.toLowerCase()?.includes(query)
       );
 
       memoriesBasic.value = filtered;
@@ -271,13 +270,14 @@ export function useMemories(apiId) {
 
     try {
       if (editingMemory.value) {
-        // Update via API
+        // Update via API - pass cached data to avoid redundant loadMemory call
+        const existingData = memoriesDetail.value[editingMemory.value];
         const updated = await apiService.updateMemory(editingMemory.value, {
           title: formData.title,
           text: formData.text,
           eventDate: formData.eventDate,
           imageBase64: formData.imageBase64
-        });
+        }, existingData);
 
         // Update cache
         memoriesDetail.value[editingMemory.value] = updated;
@@ -294,7 +294,7 @@ export function useMemories(apiId) {
         successMessage.value = '✅ Thêm thành công!';
 
         // Clear cache để reload từ API
-        memoriesDetail.value = {};
+        memoriesDetail.value[created.id] = created;
       }
 
       // Reload list
