@@ -345,7 +345,7 @@ export function useMemories(apiId) {
     try {
       // Get current data
       const data = memoriesDetail.value[id] || memoriesBasic.value.find(m => m.id === id) || {};
-
+      
       await apiService.deleteMemory(id, data);
       
       successMessage.value = '✅ Xóa thành công!';

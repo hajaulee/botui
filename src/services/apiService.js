@@ -125,11 +125,13 @@ export class APIService {
         const data = await response.json();
         // Sort theo eventDate giảm dần
         let memories = Array.isArray(data) ? data : data.data || [];
-        memories = memories.sort((a, b) => {
-            const dateA = new Date(a.eventDate).getTime();
-            const dateB = new Date(b.eventDate).getTime();
-            return dateB - dateA;
-        });
+        memories = memories
+            .filter(memory => !memory.isDeleted)
+            .sort((a, b) => {
+                const dateA = new Date(a.eventDate).getTime();
+                const dateB = new Date(b.eventDate).getTime();
+                return dateB - dateA;
+            });
         return memories;
     }
 
@@ -324,6 +326,7 @@ export class APIService {
         const memoryData = {
             ...existingData,
             id: memoryId,
+            title: existingData.title || 'Đã xóa',
             isDeleted: true,
             updatedAt: new Date().toISOString()
         };
