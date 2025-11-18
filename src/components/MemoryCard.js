@@ -16,8 +16,29 @@ export default {
   data() {
     return {
       isExpanded: false,
-      showMenu: false
+      showMenu: false,
+      observed: false
     };
+  },
+
+  mounted() {
+    // Setup Intersection Observer để lazy load khi card visible
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !this.observed) {
+            this.observed = true;
+            this.$emit('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, {
+        rootMargin: '50px', // Trigger 50px trước khi thực sự visible
+        threshold: 0.1
+      });
+
+      observer.observe(this.$el);
+    }
   },
 
   template: /* html */`

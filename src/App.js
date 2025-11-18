@@ -92,6 +92,7 @@ export default {
         <!-- Memories Page -->
         <MemoriesPage 
           v-else-if="currentPage === 'memories'"
+          :api-id="apiId"
           @navigate="goToPage"
         />
 

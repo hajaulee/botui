@@ -1,15 +1,17 @@
 /**
  * MemoriesPage Component
- * Trang chính để quản lý kỷ niệm
+ * Trang chính để quản lý kỷ niệm (API version)
  */
 
-import { useMemories } from '../composables/useMemories.js';
+import { useMemoriesApi } from '../composables/useMemoriesApi.js';
 import MemoryCard from '../components/MemoryCard.js';
+import SkeletonMemoryCard from '../components/SkeletonMemoryCard.js';
 import AddMemoryModal from '../components/AddMemoryModal.js';
 
 export default {
   components: {
     MemoryCard,
+    SkeletonMemoryCard,
     AddMemoryModal
   },
 
@@ -129,13 +131,20 @@ export default {
 
       <!-- Memory Cards Grid -->
       <div v-if="filteredMemories.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" ref="cardContainer">
-        <MemoryCard
-          v-for="memory in filteredMemories"
-          :key="memory.id"
-          :memory="memory"
-          @edit="openEditModal(memory)"
-          @delete="deleteMemory(memory.id)"
-        />
+        <!-- Memory Card or Skeleton -->
+        <template v-for="memory in filteredMemories" :key="memory.id">
+          <!-- Show skeleton while loading detail -->
+          <SkeletonMemoryCard v-if="isMemoryLoading(memory.id)" />
+          
+          <!-- Show full card when loaded -->
+          <MemoryCard
+            v-else
+            :memory="memory"
+            @edit="openEditModal(memory)"
+            @delete="deleteMemory(memory.id)"
+            @visible="() => lazyLoadMemory(memory.id)"
+          />
+        </template>
       </div>
 
       <!-- Load More Button (Infinite Scroll) -->
@@ -165,16 +174,24 @@ export default {
     </div>
   `,
 
-  setup() {
-    const composable = useMemories();
+  props: {
+    apiId: {
+      type: String,
+      required: true
+    }
+  },
 
-    // Load memories on mount
+  setup(props) {
+    const composable = useMemoriesApi(props.apiId);
+
+    // Load memories list on mount
     const { onMounted } = Vue;
     
     onMounted(async () => {
-      await composable.loadMemories();
+      await composable.loadMemoriesList();
     });
 
     return composable;
   }
+
 };

@@ -105,4 +105,132 @@ export class APIService {
     
     return response.json();
   }
+
+  /**
+   * Lấy danh sách memories (basic info)
+   * GET target=memory&action=list
+   * @returns {Promise<Array>} List memories với {id, eventDate, title}
+   */
+  async getMemoriesList() {
+    const apiUrl = `https://script.google.com/macros/s/${this.apiId}/exec?target=memory&action=list`;
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    // Lọc bỏ những memory bị delete
+    let memories = Array.isArray(data) ? data : data.data || [];
+    memories = memories.filter(m => !m.isDeleted);
+    return memories;
+  }
+
+  /**
+   * Lấy chi tiết memory (lazy loading)
+   * GET target=memory&action=load&postId={id}
+   * @param {number|string} memoryId - ID của memory
+   * @returns {Promise<Object|null>} Memory object hoặc null nếu bị delete
+   */
+  async loadMemory(memoryId) {
+    const apiUrl = `https://script.google.com/macros/s/${this.apiId}/exec?target=memory&action=load&postId=${memoryId}`;
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    const memory = data.data || data;
+    
+    // Nếu memory bị delete, return null
+    if (memory.isDeleted) {
+      return null;
+    }
+    
+    return memory;
+  }
+
+  /**
+   * Lưu memory (tạo/sửa/xóa)
+   * GET target=memory&action=save&content={json}
+   * @param {Object} memoryData - Memory object
+   * @returns {Promise<Object>} Saved memory object
+   */
+  async saveMemory(memoryData) {
+    if (!memoryData.title || !memoryData.eventDate) {
+      throw new Error('Title và eventDate là bắt buộc');
+    }
+
+    const apiUrl = `https://script.google.com/macros/s/${this.apiId}/exec?target=memory&action=save`;
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        body: JSON.stringify(memoryData)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return response.json();
+  }
+
+  /**
+   * Tạo memory mới
+   * @param {Object} memoryData - { title, text, eventDate, imageBase64 }
+   * @returns {Promise<Object>} Created memory object
+   */
+  async createMemory(memoryData) {
+    const newMemory = {
+      ...memoryData,
+      id: Date.now(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isDeleted: false
+    };
+
+    return this.saveMemory(newMemory);
+  }
+
+  /**
+   * Cập nhật memory
+   * @param {number|string} memoryId - ID của memory
+   * @param {Object} updates - Dữ liệu cần update
+   * @returns {Promise<Object>} Updated memory object
+   */
+  async updateMemory(memoryId, updates) {
+    // Lấy existing data
+    const existing = await this.loadMemory(memoryId);
+    
+    if (!existing) {
+      throw new Error(`Memory ${memoryId} không tồn tại hoặc đã bị xóa`);
+    }
+    
+    const updatedMemory = {
+      ...existing,
+      ...updates,
+      id: memoryId,
+      updatedAt: new Date().toISOString(),
+      isDeleted: false
+    };
+
+    return this.saveMemory(updatedMemory);
+  }
+
+  /**
+   * Xóa memory (soft delete)
+   * @param {number|string} memoryId - ID của memory
+   * @param {Object} existingData - Existing memory data
+   * @returns {Promise<Object>} Updated memory object
+   */
+  async deleteMemory(memoryId, existingData = {}) {
+    const memoryData = {
+      ...existingData,
+      id: memoryId,
+      isDeleted: true,
+      updatedAt: new Date().toISOString()
+    };
+
+    return this.saveMemory(memoryData);
+  }
 }
