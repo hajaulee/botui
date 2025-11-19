@@ -130,8 +130,8 @@ export default {
       currentPage.value = pageName;
       
       if (pageName === 'menu') {
-        // Clear history when going to menu
-        window.history.replaceState({}, '', '?');
+        // Clear history when going to menu, but keep query params(except page)
+        window.history.replaceState({}, '', `?${new URLSearchParams(window.location.search).toString().replace(/([&?])page=[^&]*/, '')}`);
       } else {
         // Set query param and push history for other pages
         const params = new URLSearchParams(window.location.search);
@@ -139,6 +139,11 @@ export default {
         window.history.pushState({ page: pageName }, '', `?${params.toString()}`);
       }
     };
+
+    window.addEventListener("popstate", () => {
+      const page = new URLSearchParams(window.location.search).get("page");
+      currentPage.value = page || 'menu';
+    });
 
     return {
       apiId,
