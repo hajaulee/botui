@@ -128,6 +128,16 @@ export default {
 
     const goToPage = (pageName) => {
       currentPage.value = pageName;
+      
+      if (pageName === 'menu') {
+        // Clear history when going to menu
+        window.history.replaceState({}, '', '?');
+      } else {
+        // Set query param and push history for other pages
+        const params = new URLSearchParams(window.location.search);
+        params.set('page', pageName);
+        window.history.pushState({ page: pageName }, '', `?${params.toString()}`);
+      }
     };
 
     return {

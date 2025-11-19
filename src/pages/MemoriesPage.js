@@ -65,7 +65,7 @@ export default {
         </div>
 
         <!-- Results Info -->
-        <div v-if="displayedMemories.length > 0" class="mt-4 pt-4" style="border-top: 1px solid var(--border);">
+        <div v-if="displayedMemories.length > 0" class="mt-4 pt-4">
           <p class="text-sm font-medium">
             <span class="badge badge-primary">
               📌 Đang hiển thị <strong>{{ displayedMemories.length }}</strong> kỷ niệm
